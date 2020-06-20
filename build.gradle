@@ -3,7 +3,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven { url = "https://dl.bintray.com/nospoonlab/nospoonlab/" }
+        maven { url = "https://maven.pkg.github.com/gokoan/kuick/" }
         gradlePluginPortal()
     }
 
@@ -20,7 +20,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven { url = "https://dl.bintray.com/nospoonlab/nospoonlab/" }
+        maven { url = "https://maven.pkg.github.com/gokoan/kuick/" }
         gradlePluginPortal()
     }
 }
@@ -29,7 +29,7 @@ subprojects {
     apply plugin: 'maven'
     apply plugin: 'maven-publish'
 
-    group = "com.nospoonlab"
+    group = "com.gokoan"
 
     def isKuick = project.name.startsWith("kuick")
     def multiProject = true
