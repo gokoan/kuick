@@ -20,6 +20,6 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Publish with Gradle
-      run: gradle publish -x jvmTest
+      run: ./gradlew publish -x jvmTest
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
