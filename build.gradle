@@ -3,7 +3,7 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven { url = "https://maven.pkg.github.com/gokoan/kuick/" }
+        maven { url = "https://maven.pkg.github.com/gokoan/kuick" }
         gradlePluginPortal()
     }
 
@@ -20,7 +20,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven { url = "https://maven.pkg.github.com/gokoan/" }
+        maven { url = "https://maven.pkg.github.com/gokoan/kuick" }
         gradlePluginPortal()
     }
 }
@@ -35,7 +35,12 @@ subprojects {
     def multiProject = true
     def includeJs = isKuick
     def mustPublish = !project.path.startsWith(":samples")
-    //println(project.path)
+    println("--------------------------")
+    println("project.name:  " + project.name)
+    println("project.path:  " + project.path)
+    println("isKuick:       " + isKuick)
+    println("includeJs:     " + includeJs)
+    println("mustPublish:   " + mustPublish)
 
     if (multiProject) {
         apply plugin: 'kotlin-multiplatform'
@@ -163,7 +168,7 @@ subprojects {
                             username = publishUser
                             password = publishPassword
                         }
-                        url = uri("https://maven.pkg.github.com/gokoan/")
+                        url = uri("https://maven.pkg.github.com/gokoan/kuick")
                     }
                 }
                 publications {
