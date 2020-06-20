@@ -152,8 +152,8 @@ subprojects {
     }
 
     if (mustPublish) {
-        def publishUser = (rootProject.findProperty("BINTRAY_USER") ?: project.findProperty("bintrayUser") ?: System.getenv("BINTRAY_USER"))?.toString()
-        def publishPassword = (rootProject.findProperty("BINTRAY_KEY") ?: project.findProperty("bintrayApiKey") ?: System.getenv("BINTRAY_API_KEY"))?.toString()
+        def publishUser = System.getenv("GITHUB_ACTOR") //(rootProject.findProperty("BINTRAY_USER") ?: project.findProperty("bintrayUser") ?: System.getenv("BINTRAY_USER"))?.toString()
+        def publishPassword = System.getenv("GITHUB_TOKEN") // (rootProject.findProperty("BINTRAY_KEY") ?: project.findProperty("bintrayApiKey") ?: System.getenv("BINTRAY_API_KEY"))?.toString()
 
         if (publishUser != null && publishPassword != null) {
             publishing {
@@ -163,7 +163,7 @@ subprojects {
                             username = publishUser
                             password = publishPassword
                         }
-                        url = uri("https://api.bintray.com/maven/nospoonlab/nospoonlab/${project.property("project.repository")}/")
+                        url = uri("https://maven.pkg.github.com/gokoan/kuick/")
                     }
                 }
                 publications {
