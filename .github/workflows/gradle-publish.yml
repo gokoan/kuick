@@ -22,4 +22,4 @@ jobs:
     - name: Publish with Gradle
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: ./gradlew publish
+      run: ./gradlew build publish -x jvmTest
