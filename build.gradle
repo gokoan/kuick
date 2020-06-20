@@ -20,7 +20,7 @@ allprojects {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven { url = "https://maven.pkg.github.com/gokoan/kuick/" }
+        maven { url = "https://maven.pkg.github.com/gokoan/" }
         gradlePluginPortal()
     }
 }
@@ -163,7 +163,7 @@ subprojects {
                             username = publishUser
                             password = publishPassword
                         }
-                        url = uri("https://maven.pkg.github.com/gokoan/kuick/")
+                        url = uri("https://maven.pkg.github.com/gokoan/")
                     }
                 }
                 publications {
