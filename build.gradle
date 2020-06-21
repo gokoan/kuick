@@ -26,7 +26,6 @@ allprojects {
 }
 
 subprojects {
-    apply plugin: 'maven'
     apply plugin: 'maven-publish'
 
     group = "com.gokoan"
@@ -79,42 +78,42 @@ subprojects {
                 }
             }
 
-            sourceSets {
-                commonMain {
-                    dependencies {
-                        implementation kotlin('stdlib-common')
-                    }
-                }
-                commonTest {
-                    dependencies {
-                        implementation kotlin('test-common')
-                        implementation kotlin('test-annotations-common')
-                    }
-                }
-                jvmMain {
-                    dependencies {
-                        implementation kotlin('stdlib-jdk8')
-                    }
-                }
-                jvmTest {
-                    dependencies {
-                        implementation kotlin('test')
-                        implementation kotlin('test-junit')
-                    }
-                }
-                if (includeJs) {
-                    jsMain {
-                        dependencies {
-                            implementation kotlin('stdlib-js')
-                        }
-                    }
-                    jsTest {
-                        dependencies {
-                            implementation kotlin('test-js')
-                        }
-                    }
-                }
-            }
+//            sourceSets {
+//                commonMain {
+//                    dependencies {
+//                        implementation kotlin('stdlib-common')
+//                    }
+//                }
+//                commonTest {
+//                    dependencies {
+//                        implementation kotlin('test-common')
+//                        implementation kotlin('test-annotations-common')
+//                    }
+//                }
+//                jvmMain {
+//                    dependencies {
+//                        implementation kotlin('stdlib-jdk8')
+//                    }
+//                }
+//                jvmTest {
+//                    dependencies {
+//                        implementation kotlin('test')
+//                        implementation kotlin('test-junit')
+//                    }
+//                }
+//                if (includeJs) {
+//                    jsMain {
+//                        dependencies {
+//                            implementation kotlin('stdlib-js')
+//                        }
+//                    }
+//                    jsTest {
+//                        dependencies {
+//                            implementation kotlin('test-js')
+//                        }
+//                    }
+//                }
+//            }
         }
 
         jvmTest {
@@ -169,29 +168,10 @@ subprojects {
                 }
             }
             publications {
-                maven(MavenPublication) {
+                kotlinMultiplatform {
                     groupId = project.group
                     artifactId = project.name
                     version = project.version
-
-                    from multiProject ? components.kotlin : components.java
-
-                    maven(MavenPublication) {
-                        pom {
-                            name = project.name
-                            description = project.property("project.description")
-                            url = project.property("project.scm.url")
-                            licenses {
-                                license {
-                                    name = project.property("project.license.name")
-                                    url = project.property("project.license.url")
-                                }
-                            }
-                            scm {
-                                url = project.property("project.scm.url")
-                            }
-                        }
-                    }
                 }
             }
         }

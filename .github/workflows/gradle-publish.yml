@@ -12,6 +12,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # --------------------- DELETE KUICK-CORE
+    - uses: actions/delete-package-versions@v1
+      with:
+        package-name: 'com.gokoan.kuick-core'
+    - uses: actions/delete-package-versions@v1
+      with:
+        package-name: 'com.gokoan.kuick-core-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+        package-name: 'com.gokoan.kuick-core-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-core-jvm'
+    # --------------------- DELETE SQUASH-CORE
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core-jvm'
+    # --------------------- CHECKOUT and PUBLISH
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
@@ -20,6 +44,6 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Publish with Gradle
-      run: ./gradlew publish -x jvmTest
+      run: ./gradlew publish
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
