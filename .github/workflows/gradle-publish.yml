@@ -25,19 +25,99 @@ jobs:
     - uses: actions/delete-package-versions@v1
       with:
           package-name: 'com.gokoan.kuick-core-jvm'
+    # --------------------- DELETE com.gokoan.kuick-repositories-squash
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-squash'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-squash-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-squash-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-squash-jvm'
     # --------------------- DELETE SQUASH-CORE
     - uses: actions/delete-package-versions@v1
       with:
           package-name: 'com.gokoan.squash-core'
     - uses: actions/delete-package-versions@v1
       with:
-          package-name: 'com.gokoan.squash-core-js'
+          package-name: 'com.gokoan.squash-core-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core-jvm'
+    # --------------------- DELETE VENDOR
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.vendor'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.vendor-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.vendor-jvm'
+    # --------------------- DELETE SQUASH-CORE
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core'
     - uses: actions/delete-package-versions@v1
       with:
           package-name: 'com.gokoan.squash-core-metadata'
     - uses: actions/delete-package-versions@v1
       with:
           package-name: 'com.gokoan.squash-core-jvm'
+    # --------------------- DELETE SQUASH-CORE
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-core-jvm'
+    # --------------------- DELETE SQUASH-GRAPH
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-graph'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-graph-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-graph-jvm'
+    # --------------------- DELETE SQUASH-JDBC
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-jdbc'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-jdbc-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-jdbc-jvm'
+    # --------------------- DELETE SQUASH-H2
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-h2'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-h2-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-h2-jvm'
+    # --------------------- DELETE SQUASH-postgres
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-postgres'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-postgres-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.squash-postgres-jvm'
     # --------------------- CHECKOUT and PUBLISH
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
