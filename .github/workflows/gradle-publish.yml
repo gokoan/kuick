@@ -31,6 +31,9 @@ jobs:
           package-name: 'com.gokoan.squash-core'
     - uses: actions/delete-package-versions@v1
       with:
+          package-name: 'com.gokoan.squash-core-js'
+    - uses: actions/delete-package-versions@v1
+      with:
           package-name: 'com.gokoan.squash-core-metadata'
     - uses: actions/delete-package-versions@v1
       with:
