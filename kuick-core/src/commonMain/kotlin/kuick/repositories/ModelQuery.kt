@@ -84,7 +84,7 @@ class FieldNeq<T : Any, V : Any>(field: KProperty1<T, V?>, value: V?) : SimpleFi
 infix fun <T : Any, V : Any> KProperty1<T, @Exact V?>.ne(value: V?) = FieldNeq(this, value)
 
 // LIKE ~=
-class FieldLike<T : Any>(field: KProperty1<T, String?>, value: String) : SimpleFieldBinop<T, String>(field, value, "~=")
+class FieldLike<T : Any>(field: KProperty1<T, String?>, value: String) : SimpleFieldBinop<T, String>(field, value, "LIKE")
 
 infix fun <T : Any> KProperty1<T, String?>.like(value: String) = FieldLike(this, value)
 

@@ -3,7 +3,9 @@ buildscript {
         mavenLocal()
         mavenCentral()
         jcenter()
-        maven { url = "https://maven.pkg.github.com/gokoan/kuick" }
+        maven {
+            url = "https://maven.pkg.github.com/gokoan/kuick"
+        }
         gradlePluginPortal()
     }
 
