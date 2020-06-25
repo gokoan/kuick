@@ -2,7 +2,7 @@ name: publish_kuick
 
 on:
   release:
-    types: [published]
+    types: [created]
 
 jobs:
   build:
@@ -23,6 +23,19 @@ jobs:
     - uses: actions/delete-package-versions@v1
       with:
           package-name: 'com.gokoan.kuick-core-jvm'
+    # --------------------- DELETE KUICK-LOGGING
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging-jvm'
     # --------------------- DELETE com.gokoan.kuick-repositories-squash
     - uses: actions/delete-package-versions@v1
       with:
