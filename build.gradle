@@ -4,6 +4,7 @@ buildscript {
         mavenCentral()
         jcenter()
         maven { url = "https://dl.bintray.com/nospoonlab/nospoonlab/" }
+        maven { url = "https://maven.pkg.github.com/gokoan/" }
         gradlePluginPortal()
     }
 
@@ -21,6 +22,7 @@ allprojects {
         mavenCentral()
         jcenter()
         maven { url = "https://dl.bintray.com/nospoonlab/nospoonlab/" }
+        maven { url = "https://maven.pkg.github.com/gokoan/" }
         gradlePluginPortal()
     }
 }
@@ -114,7 +116,7 @@ subprojects {
     }
 
     if (mustPublish) {
-        def publishUser = (rootProject.findProperty("BINTRAY_USER") ?: project.findProperty("bintrayUser") ?: System.getenv("BINTRAY_USER"))?.toString()
+        /*def publishUser = (rootProject.findProperty("BINTRAY_USER") ?: project.findProperty("bintrayUser") ?: System.getenv("BINTRAY_USER"))?.toString()
         def publishPassword = (rootProject.findProperty("BINTRAY_KEY") ?: project.findProperty("bintrayApiKey") ?: System.getenv("BINTRAY_API_KEY"))?.toString()
         println("Bintray publish: ${publishUser} / ${publishPassword}")
 
@@ -137,6 +139,19 @@ subprojects {
                     }
                 }
             }
+        }*/
+        publishing {
+            repositories {
+                maven {
+                    name = "GitHubPackages"
+                    url = "https://maven.pkg.github.com/gokoan/kuick"
+                    credentials {
+                        username = System.getenv("USERNAME")
+                        password = System.getenv("GITHUB_TOKEN")
+                    }
+                }
+            }
         }
     }
+
 }
