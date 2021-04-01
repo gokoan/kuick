@@ -68,55 +68,55 @@ fun <T : Any, F : Any> KProperty1<T, F?>.isNull() = FieldIsNull(this)
 
 
 // Field Binary Operator
-abstract class FieldBinop<T : Any, F : Any, V : Any>(val field: KProperty1<T, F?>, val value: V?) : ModelFilterExp<T>()
+abstract class FieldBinop<T : Any, F : Any?, V : Any?>(val field: KProperty1<T, F>, val value: V) : ModelFilterExp<T>()
 
 // Field Binary Operator for simple queries
-abstract class SimpleFieldBinop<T : Any, V : Any>(field: KProperty1<T, V?>, value: V?, val op: String) : FieldBinop<T, V, V>(field, value)
+abstract class SimpleFieldBinop<T : Any, V : Any?>(field: KProperty1<T, V>, value: V, val op: String) : FieldBinop<T, V, V>(field, value)
 
 // EQ =
-class FieldEqs<T : Any, V : Any>(field: KProperty1<T, V?>, value: V?) : SimpleFieldBinop<T, V>(field, value, "=")
+class FieldEqs<T : Any, V : Any?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, "=")
 
-infix fun <T : Any, V : Any> KProperty1<T, @Exact V?>.eq(value: V?) = FieldEqs(this, value)
+infix fun <T : Any, V : Any?> KProperty1<T, @Exact V>.eq(value: V) = FieldEqs(this, value)
 
 // NE <>
-class FieldNeq<T : Any, V : Any>(field: KProperty1<T, V?>, value: V?) : SimpleFieldBinop<T, V>(field, value, "<>")
+class FieldNeq<T : Any, V : Any?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, "<>")
 
-infix fun <T : Any, V : Any> KProperty1<T, @Exact V?>.ne(value: V?) = FieldNeq(this, value)
+infix fun <T : Any, V : Any?> KProperty1<T, @Exact V>.ne(value: V) = FieldNeq(this, value)
 
 // LIKE ~=
-class FieldLike<T : Any>(field: KProperty1<T, String?>, value: String) : SimpleFieldBinop<T, String>(field, value, "~=")
+class FieldLike<T : Any>(field: KProperty1<T, String?>, value: String) : SimpleFieldBinop<T, String?>(field, value, "~=")
 
 infix fun <T : Any> KProperty1<T, String?>.like(value: String) = FieldLike(this, value)
 
 // GT >
-class FieldGt<T : Any, V : Comparable<V>>(field: KProperty1<T, V?>, value: V) : SimpleFieldBinop<T, V>(field, value, ">")
+class FieldGt<T : Any, V : Comparable<V>?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, ">")
 
-infix fun <T : Any, V : Comparable<V>> KProperty1<T, @Exact V?>.gt(value: V) = FieldGt(this, value)
+infix fun <T : Any, V : Comparable<V>?> KProperty1<T, @Exact V>.gt(value: V) = FieldGt(this, value)
 
 // GTE >=
-class FieldGte<T : Any, V : Comparable<V>>(field: KProperty1<T, V?>, value: V) : SimpleFieldBinop<T, V>(field, value, ">=")
+class FieldGte<T : Any, V : Comparable<V>?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, ">=")
 
-infix fun <T : Any, V : Comparable<V>> KProperty1<T, @Exact V?>.gte(value: V) = FieldGte(this, value)
+infix fun <T : Any, V : Comparable<V>?> KProperty1<T, @Exact V>.gte(value: V) = FieldGte(this, value)
 
 // LT <
-class FieldLt<T : Any, V : Comparable<V>>(field: KProperty1<T, V?>, value: V) : SimpleFieldBinop<T, V>(field, value, "<")
+class FieldLt<T : Any, V : Comparable<V>?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, "<")
 
-infix fun <T : Any, V : Comparable<V>> KProperty1<T, @Exact V?>.lt(value: V) = FieldLt(this, value)
+infix fun <T : Any, V : Comparable<V>?> KProperty1<T, @Exact V>.lt(value: V) = FieldLt(this, value)
 
 // LTE <=
-class FieldLte<T : Any, V : Comparable<V>>(field: KProperty1<T, V?>, value: V) : SimpleFieldBinop<T, V>(field, value, "<=")
+class FieldLte<T : Any, V : Comparable<V>?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, "<=")
 
-infix fun <T : Any, V : Comparable<V>> KProperty1<T, @Exact V?>.lte(value: V) = FieldLte(this, value)
+infix fun <T : Any, V : Comparable<V>?> KProperty1<T, @Exact V>.lte(value: V) = FieldLte(this, value)
 
 // Field Binary Operator for collection queries
-abstract class FieldBinopOnSet<T : Any, V : Any>(field: KProperty1<T, V?>, value: Set<V>) : FieldBinop<T, V, Set<V>>(field, value)
+abstract class FieldBinopOnSet<T : Any, V : Any?>(field: KProperty1<T, V>, value: Set<V>) : FieldBinop<T, V, Set<V>>(field, value)
 
 // within ==
 // for primitive types
-class FieldWithin<T : Any, V : Any>(field: KProperty1<T, V?>, value: Set<V>) : FieldBinopOnSet<T, V>(field, value)
+class FieldWithin<T : Any, V : Any?>(field: KProperty1<T, V>, value: Set<V>) : FieldBinopOnSet<T, V>(field, value)
 
 // for complex types
-class FieldWithinComplex<T : Any, V : Any>(field: KProperty1<T, V?>, value: Set<V>) : FieldBinopOnSet<T, V>(field, value)
+class FieldWithinComplex<T : Any, V : Any?>(field: KProperty1<T, V>, value: Set<V>) : FieldBinopOnSet<T, V>(field, value)
 
 inline infix fun <T : Any, reified V : Any> KProperty1<T, V?>.within(value: @Exact Set<V>) =
         if (isBasicType(V::class))
