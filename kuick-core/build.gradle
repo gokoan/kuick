@@ -1,5 +1,5 @@
 dependencies {
-    jvmApi 'com.google.code.gson:gson:2.2.4'
-    jvmApi 'com.google.inject:guice:4.2.0'
+    jvmApi "com.google.code.gson:gson:$gson_version"
+    jvmApi "com.google.inject:guice:$guice_version"
     commonMainApi "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
 }

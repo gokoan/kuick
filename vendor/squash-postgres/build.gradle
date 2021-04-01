@@ -2,5 +2,5 @@ dependencies {
     jvmMainApi project(":vendor:squash-core")
     jvmMainApi project(":vendor:squash-jdbc")
     jvmMainApi project(":vendor:squash-graph")
-    jvmMainApi "org.postgresql:postgresql:42.1.4"
+    jvmMainApi "org.postgresql:postgresql:$postgresql_version"
 }
