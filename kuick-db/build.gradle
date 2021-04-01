@@ -6,5 +6,6 @@ dependencies {
     jvmMainApi "org.postgresql:postgresql:$postgresql_version"
 
     jvmTestImplementation "org.arquillian.cube:arquillian-cube-docker:$arquillian_cube_docker_version"
+    //jvmTestImplementation "com.github.docker-java:docker-java:$docker_java_version"
     jvmTestImplementation "org.jboss.arquillian.junit:arquillian-junit-standalone:$arquillian_junit_standalone_version"
 }

@@ -7,5 +7,6 @@ dependencies {
     jvmMainApi "com.google.guava:guava:$guava_version"
     jvmMainApi "org.elasticsearch.client:elasticsearch-rest-high-level-client:$elasticsearch_rest_high_level_client_version"
     jvmTestImplementation "org.arquillian.cube:arquillian-cube-docker:$arquillian_cube_docker_version"
+    //jvmTestImplementation "com.github.docker-java:docker-java:$docker_java_version"
     jvmTestImplementation "org.jboss.arquillian.junit:arquillian-junit-standalone:$arquillian_junit_standalone_version"
 }
