@@ -3,8 +3,8 @@ dependencies {
 
     //commonMainApi project(":monitoring")
     jvmMainApi "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
-    jvmMainApi 'com.google.inject:guice:4.2.0'
-    jvmMainApi 'com.google.guava:guava:23.5-jre'
+    jvmMainApi "com.google.inject:guice:$guice_version"
+    jvmMainApi "com.google.guava:guava:$guava_version"
     //jvmMainApi "com.nospoonlab:squash-h2:$squash_version"
     //jvmMainApi "com.nospoonlab:squash-postgres:$squash_version"
 

@@ -2,7 +2,7 @@ dependencies {
     jvmMainApi project(":vendor:squash-core")
     jvmMainApi project(":vendor:squash-graph")
     jvmMainApi project(":vendor:squash-jdbc")
-    jvmMainApi 'com.h2database:h2:1.4.197'
+    jvmMainApi "com.h2database:h2:$h2_version"
     //jvmTestApi project(":vendor:squash-graph").sourceSets.test.output
     //jvmTestApi project(":vendor:squash-core").sourceSets.test.output
 
