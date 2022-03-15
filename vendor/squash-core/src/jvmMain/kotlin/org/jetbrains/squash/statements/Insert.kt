@@ -9,7 +9,7 @@ open class InsertStatementSeed<T : Table>(val table: T)
 open class InsertValuesStatement<T : Table, R>(val table: T) : Statement<R> {
     val values: MutableMap<Column<*>, Any?> = LinkedHashMap()
 
-    operator fun <V, S : V> set(column: Column<@Exact V>, value: S?) {
+    operator fun <V, S : V> set(column: Column<V>, value: S) {
         if (values.containsKey(column)) {
             error("$column is already initialized")
         }

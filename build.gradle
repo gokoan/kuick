@@ -2,10 +2,6 @@ buildscript {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
-        maven {
-            url = "https://maven.pkg.github.com/gokoan/kuick"
-        }
         gradlePluginPortal()
     }
 
@@ -14,15 +10,13 @@ buildscript {
 }
 
 plugins {
-    id "org.jetbrains.kotlin.multiplatform" version "1.3.72" apply false
+    id "org.jetbrains.kotlin.multiplatform" version "$kotlin_version" apply false
 }
 
 allprojects {
     repositories {
         mavenLocal()
         mavenCentral()
-        jcenter()
-        maven { url = "https://maven.pkg.github.com/gokoan/kuick" }
         gradlePluginPortal()
     }
 }
@@ -30,18 +24,13 @@ allprojects {
 subprojects {
     apply plugin: 'maven-publish'
 
-    group = "com.gokoan"
+    group = "com.nospoonlab"
 
     def isKuick = project.name.startsWith("kuick")
     def multiProject = true
     def includeJs = isKuick
     def mustPublish = !project.path.startsWith(":samples")
-    println("--------------------------")
-    println("project.name:  " + project.name)
-    println("project.path:  " + project.path)
-    println("isKuick:       " + isKuick)
-    println("includeJs:     " + includeJs)
-    println("mustPublish:   " + mustPublish)
+    //println(project.path)
 
     if (multiProject) {
         apply plugin: 'kotlin-multiplatform'
@@ -80,42 +69,6 @@ subprojects {
                 }
             }
 
-//            sourceSets {
-//                commonMain {
-//                    dependencies {
-//                        implementation kotlin('stdlib-common')
-//                    }
-//                }
-//                commonTest {
-//                    dependencies {
-//                        implementation kotlin('test-common')
-//                        implementation kotlin('test-annotations-common')
-//                    }
-//                }
-//                jvmMain {
-//                    dependencies {
-//                        implementation kotlin('stdlib-jdk8')
-//                    }
-//                }
-//                jvmTest {
-//                    dependencies {
-//                        implementation kotlin('test')
-//                        implementation kotlin('test-junit')
-//                    }
-//                }
-//                if (includeJs) {
-//                    jsMain {
-//                        dependencies {
-//                            implementation kotlin('stdlib-js')
-//                        }
-//                    }
-//                    jsTest {
-//                        dependencies {
-//                            implementation kotlin('test-js')
-//                        }
-//                    }
-//                }
-//            }
         }
 
         jvmTest {
@@ -158,24 +111,42 @@ subprojects {
     }
 
     if (mustPublish) {
+        /*def publishUser = (rootProject.findProperty("BINTRAY_USER") ?: project.findProperty("bintrayUser") ?: System.getenv("BINTRAY_USER"))?.toString()
+        def publishPassword = (rootProject.findProperty("BINTRAY_KEY") ?: project.findProperty("bintrayApiKey") ?: System.getenv("BINTRAY_API_KEY"))?.toString()
+        println("Bintray publish: ${publishUser} / ${publishPassword}")
+
+        if (publishUser != null && publishPassword != null) {
+            publishing {
+                repositories {
+                    maven {
+                        credentials {
+                            username = publishUser
+                            password = publishPassword
+                        }
+                        url = uri("https://api.bintray.com/maven/nospoonlab/nospoonlab/${project.property("project.repository")}/")
+                    }
+                }
+                publications {
+                    kotlinMultiplatform {
+                        groupId = project.group
+                        artifactId = project.name
+                        version = project.version
+                    }
+                }
+            }
+        }*/
         publishing {
             repositories {
                 maven {
                     name = "GitHubPackages"
                     url = "https://maven.pkg.github.com/gokoan/kuick"
                     credentials {
-                        username = System.getenv("GITHUB_ACTOR")
+                        username = System.getenv("USERNAME")
                         password = System.getenv("GITHUB_TOKEN")
                     }
                 }
             }
-            publications {
-                kotlinMultiplatform {
-                    groupId = project.group
-                    artifactId = project.name
-                    version = project.version
-                }
-            }
         }
     }
+
 }

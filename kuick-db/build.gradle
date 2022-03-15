@@ -1,10 +1,11 @@
 dependencies {
     jvmMainApi project(":kuick-core")
-    jvmMainApi 'io.vertx:vertx-lang-kotlin-coroutines:3.7.0'
-    jvmMainApi 'io.reactiverse:reactive-pg-client:0.11.2'
-    jvmMainApi 'com.h2database:h2:1.4.197'
-    jvmMainApi "org.postgresql:postgresql:42.1.4"
+    jvmMainApi "io.vertx:vertx-lang-kotlin-coroutines:$vertx_lang_kotlin_coroutines_version"
+    jvmMainApi "io.reactiverse:reactive-pg-client:$reactive_pg_client_version"
+    jvmMainApi "com.h2database:h2:$h2_version"
+    jvmMainApi "org.postgresql:postgresql:$postgresql_version"
 
-    jvmTestImplementation 'org.arquillian.cube:arquillian-cube-docker:1.18.2'
-    jvmTestImplementation 'org.jboss.arquillian.junit:arquillian-junit-standalone:1.4.1.Final'
+    jvmTestImplementation "org.arquillian.cube:arquillian-cube-docker:$arquillian_cube_docker_version"
+    //jvmTestImplementation "com.github.docker-java:docker-java:$docker_java_version"
+    jvmTestImplementation "org.jboss.arquillian.junit:arquillian-junit-standalone:$arquillian_junit_standalone_version"
 }

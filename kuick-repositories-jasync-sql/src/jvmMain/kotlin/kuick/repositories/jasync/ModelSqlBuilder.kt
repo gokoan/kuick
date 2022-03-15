@@ -1,19 +1,12 @@
 package kuick.repositories.jasync
 
 import kuick.models.Id
-import kuick.repositories.AttributedModelQuery
-import kuick.repositories.DecoratedModelQuery
-import kuick.repositories.FieldWithin
-import kuick.repositories.FilterExpAnd
-import kuick.repositories.FilterExpOr
-import kuick.repositories.FilterExpUnopLogic
-import kuick.repositories.ModelQuery
-import kuick.repositories.SimpleFieldBinop
-import kuick.repositories.tryGetAttributed
+import kuick.repositories.*
 import kuick.utils.nonStaticFields
 import java.lang.reflect.Field
 import kotlin.reflect.KClass
-import kotlin.reflect.full.memberProperties
+import kotlin.reflect.KType
+import kotlin.reflect.full.*
 
 class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
 
@@ -24,7 +17,12 @@ class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
     private val modelProperties = modelFields
         .map { field -> kClass.memberProperties.first { it.name == field.name } }
 
-    val modelColumns = modelFields.map { it.name }
+    private fun String.toSnakeCase(): String = flatMap {
+        if (it.isUpperCase()) listOf('_', it.toLowerCase()) else listOf(it)
+    }.joinToString("")
+
+
+    val modelColumns = modelFields.map { it.name.toSnakeCase() }
 
     protected val selectColumns = modelColumns.joinToString(", ")
 
@@ -42,9 +40,9 @@ class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
         val extraSql = mutableListOf<String>()
 
         q.tryGetAttributed()?.let { q ->
+            if (q.orderBy != null) extraSql.add("ORDER BY ${q.orderBy!!.list.map { "${it.prop.name.toSnakeCase()} ${if (it.ascending) "ASC" else "DESC"}" }.joinToString(", ")}")
             if (q.skip > 0) extraSql.add("SKIP ${q.skip}")
             if (q.limit != null) extraSql.add("LIMIT ${q.limit}")
-            if (q.orderBy != null) extraSql.add("ORDER BY ${q.orderBy!!.list.map { "${it.prop.name} ${if (it.ascending) "ASC" else "DESC"}" }.joinToString(", ")}")
         }
 
         return base.copy("${base.sql} ${extraSql.joinToString(" ")}".trim(), base.values)
@@ -70,45 +68,75 @@ class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
 
 
     fun toSql(q: ModelQuery<T>, toSqlValue: (Any?) -> String = this::toSqlValue): String = when (q) {
-        is FieldWithin<T, *> -> "${q.field.name} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
+        is FieldIsNull<T, *> -> "${q.field.name.toSnakeCase()} IS NULL"
+        is FieldWithin<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
+        is FieldWithinComplex<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
         is FilterExpUnopLogic<T> -> "${q.op}(${toSql(q.exp, toSqlValue)})"
 
-        is SimpleFieldBinop<T, *> -> "${q.field.name} ${q.op} ${toSqlValue(q.value)}"
+        is SimpleFieldBinop<T, *> -> "${q.field.name.toSnakeCase()} ${q.op} ${toSqlValue(q.value)}"
         is FilterExpAnd<T> -> "(${toSql(q.left, toSqlValue)}) ${q.op} (${toSql(q.right, toSqlValue)})"
         is FilterExpOr<T> -> "(${toSql(q.left, toSqlValue)}) ${q.op} (${toSql(q.right, toSqlValue)})"
 
         is DecoratedModelQuery<T> -> toSql(q.base, toSqlValue) // Ignore
-        else -> throw NotImplementedError("Missing implementation of .toSql() for ${this}")
+        else -> throw NotImplementedError("Missing implementation of .toSql() for ${q}")
     }
 
     fun toSlotValue(value: Any?): String = "?"
 
     fun toSqlValue(value: Any?): String = when (value) {
+        null -> "NULL"
         is Boolean, is Int, is Long, is Float, is Double -> value.toString()
         is Id -> "'${value.id}'"
-        else -> "'${value.toString()}'"
+        else -> "'${value.toString().replace("'", "''")}'" // Escape single quotes
+    }
+
+    fun toDbValue(value: Any?): Any? = when {
+        value is Id -> value.id
+        else -> value
     }
 
 
     // TODO Permitir un "mapper" en el constructor para convertir propiedades
-    fun valuesOf(t: T): List<Any?> = modelProperties.map { prop -> prop.get(t) }
+    fun valuesOf(t: T): List<Any?> = modelProperties.map { prop -> toDbValue(prop.get(t)) }
 
     /**
      * Builds a model from a list of values
      */
-    fun modelFromValues(fieldValues: List<Any?>): T =
-        kClass.constructors.first().call(*fieldValues.toTypedArray())
+    fun modelFromValues(fieldValues: List<Any?>): T  {
+        val constructor = kClass.constructors.first()
+        try {
+            val values = constructor.parameters.mapIndexed { index, prop ->
+                val dbValue = fieldValues[index]
+                when {
+                    prop.type.clazz.isSubclassOf(Id::class) -> prop.type.clazz.primaryConstructor?.call(dbValue) as? Id?
+                    else -> dbValue
+                }
+            }
+            return constructor.call(*values.toTypedArray())
+        } catch (t: Throwable) {
+            System.err.println("MAPPING ERROR ------------")
+            System.err.println("Constructor: ${constructor}")
+            System.err.println("SQL results: ${fieldValues}")
+            System.err.println("\n")
+            throw t
+        }
+    }
+
+    val KType.clazz get() = classifier as KClass<*>
 
 
 
     fun queryValues(q: ModelQuery<T>): List<Any?> = when (q) {
+        is FieldIsNull<T, *> -> emptyList()
+        is FieldWithin<T, *> -> q.value?.toList() ?: emptyList()
+        is FieldWithinComplex<T, *> -> q.value?.map { toDbValue(it) } ?: emptyList()
         is FilterExpUnopLogic<T> -> queryValues(q.exp)
 
-        is SimpleFieldBinop<T, *> -> listOf(q.value)
+        is SimpleFieldBinop<T, *> -> listOf(toDbValue(q.value))
         is FilterExpAnd<T> -> queryValues(q.left) + queryValues(q.right)
         is FilterExpOr<T> -> queryValues(q.left) + queryValues(q.right)
 
         is DecoratedModelQuery<T> -> queryValues(q.base) // Ignore
-        else -> throw NotImplementedError("Missing implementation of .toSql() for ${this}")
+        else -> throw NotImplementedError("Missing implementation of .toSql() for ${q}")
     }
 }

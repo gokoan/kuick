@@ -15,7 +15,7 @@ open class UpdateQueryStatement<T : Table>(val table: T) : QueryBuilder(), State
         values[column] = value
     }
 
-    operator fun <V, S : V> set(column: Column<@Exact V>, value: S?): UpdateQueryStatement<T> {
+    operator fun <V, S : V> set(column: Column<V>, value: S?): UpdateQueryStatement<T> {
         if (values.containsKey(column)) {
             error("$column is already initialized")
         }
