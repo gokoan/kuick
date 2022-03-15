@@ -1,8 +1,8 @@
-package kuick.repositories.patterns
+package kuick.repositories.memory
 
 import kuick.concurrent.Lock
 import kuick.repositories.*
-import kuick.repositories.memory.*
+import kuick.repositories.patterns.ModelRepositoryDecorator
 import kotlin.reflect.*
 
 @Deprecated("Use kuick.caching.Cache")
@@ -27,32 +27,47 @@ class MemoryCache: Cache {
  * [ModelRepository]
  */
 open class CachedModelRepository<I : Any, T : Any>(
-        val modelClass: KClass<T>,
-        override val idField: KProperty1<T, I>,
-        val repo: ModelRepository<I, T>,
-        private val cache: Cache,
-        private val cacheField: KProperty1<T, *>
+    val modelClass: KClass<T>,
+    override val idField: KProperty1<T, I>,
+    val repo: ModelRepository<I, T>,
+    private val cache: Cache,
+    private val cacheField: KProperty1<T, *>
 ) : ModelRepositoryDecorator<I, T>(repo) {
 
-    private suspend fun invalidate(t: T) = cache.remove(cacheField(t).toString())
+    private var initialized = false
+
+    override suspend fun init() {
+        if (initialized) return
+        initialized = true
+        repo.init()
+    }
+
+    private suspend fun invalidate(t: T): Unit {
+        init()
+        cache.remove(cacheField(t).toString())
+    }
 
     override suspend fun insert(t: T): T {
+        init()
         invalidate(t)
         return super.insert(t)
     }
 
     override suspend fun update(t: T): T {
+        init()
         invalidate(t)
         return super.update(t)
     }
 
     override suspend fun delete(i: I) {
+        init()
         val t = findById(i) ?: throw IllegalArgumentException()
         invalidate(t)
         super.delete(i)
     }
 
     override suspend fun findBy(q: ModelQuery<T>): List<T> {
+        init()
         val keyEq = findCacheQuery(q)
         return if (keyEq != null) {
             val key = keyEq.value.toString()

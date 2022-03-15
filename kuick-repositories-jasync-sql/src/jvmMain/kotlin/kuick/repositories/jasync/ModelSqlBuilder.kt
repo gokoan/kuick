@@ -5,10 +5,15 @@ import kuick.repositories.*
 import kuick.utils.nonStaticFields
 import java.lang.reflect.Field
 import kotlin.reflect.KClass
-import kotlin.reflect.KType
-import kotlin.reflect.full.*
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.memberProperties
 
-class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
+class ModelSqlBuilder<T: Any>(
+    val kClass: KClass<T>,
+    _tableName: String,
+    val serializationStrategy: SerializationStrategy = DefaultSerializationStrategy()
+) {
+    private val tableName = if (_tableName != _tableName.toLowerCase()) """public."$_tableName"""" else _tableName
 
     data class PreparedSql(val sql: String, val values: List<Any?>)
 
@@ -16,11 +21,6 @@ class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
 
     private val modelProperties = modelFields
         .map { field -> kClass.memberProperties.first { it.name == field.name } }
-
-    private fun String.toSnakeCase(): String = flatMap {
-        if (it.isUpperCase()) listOf('_', it.toLowerCase()) else listOf(it)
-    }.joinToString("")
-
 
     val modelColumns = modelFields.map { it.name.toSnakeCase() }
 
@@ -35,13 +35,19 @@ class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
 
     fun selectSql(q: ModelQuery<T>) = "$selectBase WHERE ${toSql(q, this::toSqlValue)}"
 
-    fun selectPreparedSql(q: ModelQuery<T>): PreparedSql {
+    fun selectAll() = selectBase
+
+    fun checkTableSchema() = "$selectBase LIMIT 1" // Select básico con 1 row máximo
+
+    fun <A: Any> selectPreparedSql(q: ModelQuery<A>): PreparedSql = selectPreparedSql(selectBase, q)
+
+    private fun <A: Any> selectPreparedSql(selectBase: String, q: ModelQuery<A>): PreparedSql {
         val base = PreparedSql("$selectBase WHERE ${toSql(q, this::toSlotValue)}", queryValues(q))
         val extraSql = mutableListOf<String>()
 
         q.tryGetAttributed()?.let { q ->
             if (q.orderBy != null) extraSql.add("ORDER BY ${q.orderBy!!.list.map { "${it.prop.name.toSnakeCase()} ${if (it.ascending) "ASC" else "DESC"}" }.joinToString(", ")}")
-            if (q.skip > 0) extraSql.add("SKIP ${q.skip}")
+            if (q.skip > 0) extraSql.add("OFFSET ${q.skip}")
             if (q.limit != null) extraSql.add("LIMIT ${q.limit}")
         }
 
@@ -60,24 +66,56 @@ class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
     fun updatePreparedSql(t: T, q: ModelQuery<T>): PreparedSql =
         PreparedSql("UPDATE $tableName SET $updateColumns WHERE ${toSql(q, this::toSlotValue)}", valuesOf(t) + queryValues(q))
 
+
+    fun updateManyPreparedSql(ts: Collection<Pair<T, ModelQuery<T>>>): String =
+        ts.map { (t, q) ->
+            "UPDATE $tableName " +
+                "SET ${modelColumns.mapIndexed { index, s -> "$s = ${toSqlValue(valuesOf(t)[index])}" }.joinToString(", ")} " +
+                "WHERE ${toSql(q, this::toSqlValue)};"
+        }.joinToString (separator = " ")
+
+    fun preparedAtomicUpdateSql(set: Map<KProperty1<T, *>, Any?>, incr: Map<KProperty1<T, Number>, Number>, where: ModelQuery<T>): PreparedSql {
+        // Necesitamos listas para fijar un orden conocido
+        val setPairs = set.entries.toList()
+        val incPairs = incr.entries.toList()
+
+        val setClause =
+            setPairs.map { (p, v) -> "${p.name.toSnakeCase()} = ?" } +
+            incPairs.map { (p, v) -> "${p.name.toSnakeCase()} = ${p.name.toSnakeCase()} + ?" }
+
+        val setValues = setPairs.map { prepareToSetCommand(it.value) } + incPairs.map { prepareToSetCommand(it.value) }
+
+        return PreparedSql("UPDATE $tableName SET ${setClause.joinToString(", ")} WHERE ${toSql(where, this::toSlotValue)}", setValues + queryValues(where))
+    }
+
+    private fun prepareToSetCommand(value: Any?) = if (value is Id) value.id else value
+
     fun deleteSql(q: ModelQuery<T>) = "DELETE FROM $tableName WHERE ${toSql(q, this::toSqlValue)}"
 
     fun deletePreparedSql(q: ModelQuery<T>): PreparedSql =
         PreparedSql("DELETE FROM $tableName WHERE ${toSql(q, this::toSlotValue)}", queryValues(q))
 
+    fun countPreparedSql(q: ModelQuery<T>): PreparedSql =
+        PreparedSql("SELECT COUNT(*) FROM $tableName WHERE ${toSql(q, this::toSlotValue)}", queryValues(q))
 
+    fun <T: Any> toSql(q: ModelQuery<T>, toSqlValue: (Any?) -> String = this::toSqlValue): String = when {
+        q is FieldIsNull<T, *> -> "${q.field.name.toSnakeCase()} IS NULL"
+        q is FieldWithin<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
+        q is FieldWithinComplex<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
+        q is FieldLike<T> -> "${q.field.name.toSnakeCase()} ILIKE ${toSqlValue(q.value)}"
+        q is FilterExpUnopLogic<T> -> "${q.op}(${toSql(q.exp, toSqlValue)})"
 
-    fun toSql(q: ModelQuery<T>, toSqlValue: (Any?) -> String = this::toSqlValue): String = when (q) {
-        is FieldIsNull<T, *> -> "${q.field.name.toSnakeCase()} IS NULL"
-        is FieldWithin<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
-        is FieldWithinComplex<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
-        is FilterExpUnopLogic<T> -> "${q.op}(${toSql(q.exp, toSqlValue)})"
+        q is FieldEqs<T, *> && q.value == null -> "${q.field.name.toSnakeCase()} IS NULL"
+        q is SimpleFieldBinop<T, *> -> "${q.field.name.toSnakeCase()} ${q.op} ${toSqlValue(q.value)}"
+        q is FilterExpAnd<T> -> "(${toSql(q.left, toSqlValue)}) ${q.op} (${toSql(q.right, toSqlValue)})"
+        q is FilterExpOr<T> -> "(${toSql(q.left, toSqlValue)}) ${q.op} (${toSql(q.right, toSqlValue)})"
 
-        is SimpleFieldBinop<T, *> -> "${q.field.name.toSnakeCase()} ${q.op} ${toSqlValue(q.value)}"
-        is FilterExpAnd<T> -> "(${toSql(q.left, toSqlValue)}) ${q.op} (${toSql(q.right, toSqlValue)})"
-        is FilterExpOr<T> -> "(${toSql(q.left, toSqlValue)}) ${q.op} (${toSql(q.right, toSqlValue)})"
+        q is FieldBinopOnSubselect<T, *> -> {
+            val baseSubselect = "SELECT ${q.field.name.toSnakeCase()} FROM $tableName"
+            "${q.field.name.toSnakeCase()} IN (${selectPreparedSql(baseSubselect, q.value).sql})"
+        }
 
-        is DecoratedModelQuery<T> -> toSql(q.base, toSqlValue) // Ignore
+        q is DecoratedModelQuery<T> -> toSql(q.base, toSqlValue) // Ignore
         else -> throw NotImplementedError("Missing implementation of .toSql() for ${q}")
     }
 
@@ -90,53 +128,31 @@ class ModelSqlBuilder<T: Any>(val kClass: KClass<T>, val tableName: String) {
         else -> "'${value.toString().replace("'", "''")}'" // Escape single quotes
     }
 
-    fun toDbValue(value: Any?): Any? = when {
-        value is Id -> value.id
-        else -> value
-    }
+
+    fun valuesOf(t: T): List<Any?> = modelProperties.map { prop -> toDb(prop.get(t)) }
 
 
-    // TODO Permitir un "mapper" en el constructor para convertir propiedades
-    fun valuesOf(t: T): List<Any?> = modelProperties.map { prop -> toDbValue(prop.get(t)) }
-
-    /**
-     * Builds a model from a list of values
-     */
-    fun modelFromValues(fieldValues: List<Any?>): T  {
-        val constructor = kClass.constructors.first()
-        try {
-            val values = constructor.parameters.mapIndexed { index, prop ->
-                val dbValue = fieldValues[index]
-                when {
-                    prop.type.clazz.isSubclassOf(Id::class) -> prop.type.clazz.primaryConstructor?.call(dbValue) as? Id?
-                    else -> dbValue
-                }
-            }
-            return constructor.call(*values.toTypedArray())
-        } catch (t: Throwable) {
-            System.err.println("MAPPING ERROR ------------")
-            System.err.println("Constructor: ${constructor}")
-            System.err.println("SQL results: ${fieldValues}")
-            System.err.println("\n")
-            throw t
-        }
-    }
-
-    val KType.clazz get() = classifier as KClass<*>
-
-
-
-    fun queryValues(q: ModelQuery<T>): List<Any?> = when (q) {
+    fun <T: Any> queryValues(q: ModelQuery<T>): List<Any?> = when (q) {
         is FieldIsNull<T, *> -> emptyList()
-        is FieldWithin<T, *> -> q.value?.toList() ?: emptyList()
-        is FieldWithinComplex<T, *> -> q.value?.map { toDbValue(it) } ?: emptyList()
+        is FieldWithin<T, *> -> q.value?.map { toDb(it) } ?: emptyList()
+        is FieldWithinComplex<T, *> -> q.value?.map { toDb(it) } ?: emptyList()
         is FilterExpUnopLogic<T> -> queryValues(q.exp)
 
-        is SimpleFieldBinop<T, *> -> listOf(toDbValue(q.value))
+        is SimpleFieldBinop<T, *> -> listOf(toDb(q.value))
         is FilterExpAnd<T> -> queryValues(q.left) + queryValues(q.right)
         is FilterExpOr<T> -> queryValues(q.left) + queryValues(q.right)
+
+        is FieldBinopOnSubselect<T, *> -> queryValues(q.value)
 
         is DecoratedModelQuery<T> -> queryValues(q.base) // Ignore
         else -> throw NotImplementedError("Missing implementation of .toSql() for ${q}")
     }
+
+    private inline fun toDb(value: Any?): Any? = serializationStrategy.toDatabaseValue(value)
+
+
+    private fun String.toSnakeCase(): String = flatMap {
+        if (it.isUpperCase()) listOf('_', it.toLowerCase()) else listOf(it)
+    }.joinToString("")
+
 }

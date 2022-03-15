@@ -103,16 +103,11 @@ class DbCacheInvalidation @PublishedApi internal constructor(
     }
 
     override suspend fun invalidate(cacheName: String, key: String) {
-        repo.transaction {
-            repo.upsert(CacheInvalidationEntry(CacheInvalidationEntry.CacheId("$cacheName:$key"), cacheName, key, now()))
-        }
-        //repo.insert(CacheInvalidationEntry(cacheName, key, Date()))
+        repo.upsert(CacheInvalidationEntry(CacheInvalidationEntry.CacheId("$cacheName:$key"), cacheName, key, now()))
     }
 
     override suspend fun invalidateAll(cacheName: String) {
-        repo.transaction {
-            repo.deleteBy(CacheInvalidationEntry::cacheName eq cacheName)
-        }
+        repo.deleteBy(CacheInvalidationEntry::cacheName eq cacheName)
     }
 
     override fun register(cacheName: String, handler: suspend (key: String) -> Unit): Closeable {
@@ -123,9 +118,9 @@ class DbCacheInvalidation @PublishedApi internal constructor(
     }
 
     suspend fun getUpdatedSince(time: Long) =
-        repo.transaction { repo.findBy(CacheInvalidationEntry::invalidationTime gt time).sortedBy { it.invalidationTime } }
+        repo.findBy(CacheInvalidationEntry::invalidationTime gt time).sortedBy { it.invalidationTime }
 
-    suspend fun pruneBefore(time: Long) = repo.transaction { repo.deleteBy(CacheInvalidationEntry::invalidationTime lt time) }
+    suspend fun pruneBefore(time: Long) = repo.deleteBy(CacheInvalidationEntry::invalidationTime lt time)
 
     override fun close() {
         running = false

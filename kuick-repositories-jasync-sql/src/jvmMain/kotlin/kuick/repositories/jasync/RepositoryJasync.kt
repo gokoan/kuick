@@ -2,22 +2,16 @@ package kuick.repositories.jasync
 
 import com.github.jasync.sql.db.QueryResult
 import kuick.repositories.ModelQuery
-import kuick.repositories.ModelRepository
-import kuick.repositories.eq
-import java.lang.IllegalStateException
+import kuick.repositories.Repository
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
-import kuick.logging.info
-import kuick.repositories.and
 
-
-open class ModelRepositoryJasync<I : Any, T : Any>(
+open class RepositoryJasync<T : Any>(
     val modelClass: KClass<T>,
     val tableName: String,
-    override val idField: KProperty1<T, I>,
     protected val pool: JasyncPool,
     serializationStrategy: SerializationStrategy = DefaultSerializationStrategy()
-) : ModelRepository<I, T> {
+) : Repository<T> {
 
     private val mqb = ModelSqlBuilder(modelClass, tableName, serializationStrategy)
     private var initialized = false
@@ -25,12 +19,7 @@ open class ModelRepositoryJasync<I : Any, T : Any>(
     override suspend fun init() {
         if (initialized) return
         initialized = true
-        checkTableSchema()
-    }
-
-    private suspend fun checkTableSchema() {
-        pool.query(mqb.checkTableSchema())
-        logger.info { "- Jasync repo ${this::class.simpleName} connected OK to table [$tableName]" }
+        // TODO ¿DML de creación de la tabla?
     }
 
     private suspend fun ModelSqlBuilder.PreparedSql.execute(): QueryResult {
@@ -49,37 +38,10 @@ open class ModelRepositoryJasync<I : Any, T : Any>(
         return if (ts.isEmpty()) 0 else pool.query(mqb.insertManySql(ts)).rowsAffected.toInt()
     }
 
-    override suspend fun upsert(t: T): T {
-        init()
-        val updated = mqb.updatePreparedSql(t, idField eq idField.get(t)).execute()
-        return when (updated.rowsAffected) {
-            0L -> insert(t)
-            1L -> t
-            else -> throw IllegalStateException("UPSERT operation returned MORE than 1 result ==> CHECK PRIMARY KEY at $tableName that should be in field ${idField.name}")
-        }
-    }
-
-    override suspend fun updateBy(t: T, q: ModelQuery<T>): T {
-        init()
-        mqb.updatePreparedSql(t, q).execute()
-        return t
-    }
-
     override suspend fun update(set: Map<KProperty1<T, *>, Any?>, incr: Map<KProperty1<T, Number>, Number>, where: ModelQuery<T>): Int {
         init()
         return mqb.preparedAtomicUpdateSql(set, incr, where).execute().rowsAffected.toInt()
     }
-
-    override suspend fun updateMany(collection: Collection<T>)  {
-        init()
-        if (collection.any()) pool.query(mqb.updateManyPreparedSql(collection.map { it to (idField eq idField.get(it)) }))
-    }
-
-    override suspend fun updateManyBy(collection: Collection<T>, comparator: (T) -> (ModelQuery<T>)) {
-        init()
-        if (collection.any()) pool.query(mqb.updateManyPreparedSql(collection.map { it to comparator(it) }))
-    }
-
 
     override suspend fun deleteBy(q: ModelQuery<T>) {
         init()
@@ -97,7 +59,6 @@ open class ModelRepositoryJasync<I : Any, T : Any>(
     private fun QueryResult.toModelList(): List<T> = rows.map { row ->
         mqb.serializationStrategy.modelFromValues(modelClass, (0 until row.size).map { i -> row[i] } )
     }
-
 
     override suspend fun getAll(): List<T> {
         init()

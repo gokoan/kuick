@@ -1,7 +1,6 @@
 package kuick.caching
 
 import kotlinx.coroutines.runBlocking
-import kuick.repositories.patterns.MemoryCache
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

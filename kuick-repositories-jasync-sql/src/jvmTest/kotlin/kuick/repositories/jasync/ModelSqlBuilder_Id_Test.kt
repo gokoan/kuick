@@ -12,11 +12,18 @@ class ModelSqlBuilder_Id_Test {
     data class UserId(override val id: String): Id
     data class User2(val id: UserId, val name: String)
 
+    val mikeUserId = UserId("mike")
+
     @Test
-    fun `model instantiation`() {
+    fun `ID extraction`() {
         assertEquals(
-            User2(UserId("mikeId"), "Mike LaPolka"),
-            mq.modelFromValues(listOf("mikeId", "Mike LaPolka"))
+            "SELECT id, name FROM user WHERE id = 'mike'",
+            mq.selectSql(User2::id eq mikeUserId)
+        )
+
+        assertEquals(
+            ModelSqlBuilder.PreparedSql("SELECT id, name FROM user WHERE id = ?", listOf("mike")),
+            mq.selectPreparedSql(User2::id eq mikeUserId)
         )
     }
 

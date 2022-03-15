@@ -21,8 +21,8 @@ data class OrderByMultiple<T>(val other: List<OrderByDescriptor<T>>) : OrderByDe
 
 operator fun <T> OrderByDescriptor<T>.plus(other: OrderByDescriptor<T>) = OrderByMultiple(listOf(this, other))
 
-fun <T> KProperty1<T, Any>.asc(): OrderByDescriptor<T> = OrderBy(this, ascending = true)
-fun <T> KProperty1<T, Any>.desc(): OrderByDescriptor<T> = OrderBy(this, ascending = false)
+fun <T> KProperty1<T, Any?>.asc(): OrderByDescriptor<T> = OrderBy(this, ascending = true)
+fun <T> KProperty1<T, Any?>.desc(): OrderByDescriptor<T> = OrderBy(this, ascending = false)
 
 open class DecoratedModelQuery<T : Any>(val base: ModelQuery<T>) : ModelQuery<T>()
 
@@ -76,7 +76,7 @@ abstract class SimpleFieldBinop<T : Any, V : Any?>(field: KProperty1<T, V>, valu
 // EQ =
 class FieldEqs<T : Any, V : Any?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, "=")
 
-infix fun <T : Any, V : Any?> KProperty1<T, @Exact V>.eq(value: V) = FieldEqs(this, value)
+infix fun <T : Any, V : Any?> KProperty1<T,V>.eq(value: V) = FieldEqs(this, value)
 
 // NE <>
 class FieldNeq<T : Any, V : Any?>(field: KProperty1<T, V>, value: V) : SimpleFieldBinop<T, V>(field, value, "<>")
@@ -84,7 +84,7 @@ class FieldNeq<T : Any, V : Any?>(field: KProperty1<T, V>, value: V) : SimpleFie
 infix fun <T : Any, V : Any?> KProperty1<T, @Exact V>.ne(value: V) = FieldNeq(this, value)
 
 // LIKE ~=
-class FieldLike<T : Any>(field: KProperty1<T, String?>, value: String) : SimpleFieldBinop<T, String?>(field, value, "LIKE")
+class FieldLike<T : Any>(field: KProperty1<T, String?>, value: String) : SimpleFieldBinop<T, String?>(field, value, "~=")
 
 infix fun <T : Any> KProperty1<T, String?>.like(value: String) = FieldLike(this, value)
 
@@ -111,6 +111,9 @@ infix fun <T : Any, V : Comparable<V>?> KProperty1<T, @Exact V>.lte(value: V) = 
 // Field Binary Operator for collection queries
 abstract class FieldBinopOnSet<T : Any, V : Any?>(field: KProperty1<T, V>, value: Set<V>) : FieldBinop<T, V, Set<V>>(field, value)
 
+// Field Binary Operator for subselects
+class FieldBinopOnSubselect<T : Any, V : Any?>(field: KProperty1<T, V>, value: AttributedModelQuery<*>) : FieldBinop<T, V, AttributedModelQuery<*>>(field, value)
+
 // within ==
 // for primitive types
 class FieldWithin<T : Any, V : Any?>(field: KProperty1<T, V>, value: Set<V>) : FieldBinopOnSet<T, V>(field, value)
@@ -118,11 +121,13 @@ class FieldWithin<T : Any, V : Any?>(field: KProperty1<T, V>, value: Set<V>) : F
 // for complex types
 class FieldWithinComplex<T : Any, V : Any?>(field: KProperty1<T, V>, value: Set<V>) : FieldBinopOnSet<T, V>(field, value)
 
-inline infix fun <T : Any, reified V : Any> KProperty1<T, V?>.within(value: @Exact Set<V>) =
-        if (isBasicType(V::class))
-            FieldWithin(this, value)
-        else
-            FieldWithinComplex(this, value)
+inline infix fun <T : Any, reified V : Any> KProperty1<T, V?>.within(value: @Exact Set<V>) = when {
+    isBasicType(V::class) -> FieldWithin(this, value)
+    else -> FieldWithinComplex(this, value)
+}
+
+inline infix fun <T : Any, reified V : Any> KProperty1<T, V?>.within(value: @Exact AttributedModelQuery<*>) =
+    FieldBinopOnSubselect(this, value as AttributedModelQuery<*>)
 
 
 expect fun <V : Any> isBasicType(clazz: KClass<V>) : Boolean

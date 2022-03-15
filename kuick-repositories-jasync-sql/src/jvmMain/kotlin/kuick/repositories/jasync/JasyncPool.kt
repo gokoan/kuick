@@ -7,7 +7,11 @@ import com.github.jasync.sql.db.pool.ConnectionPool
 import com.github.jasync.sql.db.postgresql.PostgreSQLConnection
 import com.github.jasync.sql.db.postgresql.PostgreSQLConnectionBuilder
 import kuick.env.Environment
+import kuick.logging.Logger
+import kuick.logging.trace
 import java.util.*
+
+val logger = Logger("Jasync")
 
 class JasyncPool(
     host: String,
@@ -16,7 +20,7 @@ class JasyncPool(
     username: String,
     password: String,
     applicationName: String = "kuick-jaync-pool",
-    maxActiveConnections: Int = 2,
+    maxActiveConnections: Int = 8,
     val debug: Boolean = false
 ) {
     private val pool: ConnectionPool<PostgreSQLConnection>
@@ -56,7 +60,7 @@ class JasyncPool(
                 ?: connection().sendQuery(sql)
             val end = System.currentTimeMillis()
             val lapse = (end - begin)
-            debug("[SQL] $sql ${values ?: ""} | ${qr.rowsAffected} rows, $lapse ms")
+            logger.trace { "[SQL] $sql ${values ?: ""} | ${qr.rowsAffected} rows, $lapse ms" }
             return qr
         } catch (t: Throwable) {
             System.err.println("SQL ERROR ---------------------")
@@ -88,7 +92,7 @@ class JasyncPool(
                 database = env("DB_DATABASE"),
                 username = env("DB_USERNAME"),
                 password = env("DB_PASSWORD"),
-                maxActiveConnections = env("DB_MAX_ACTIVE_CONNECTIONS", "2").toInt(),
+                maxActiveConnections = env("DB_MAX_ACTIVE_CONNECTIONS", "8").toInt(),
                 debug = env("DB_DEBUG", "false").toBoolean()
             )
         }
