@@ -47,6 +47,10 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             targetClass == LocalDate::class && dbValue is String-> LocalDate.parse(dbValue, LOCAL_DATE_FMT)
             targetClass == LocalDate::class && dbValue is org.joda.time.LocalDate -> LocalDate.of(dbValue.year, dbValue.monthOfYear, dbValue.dayOfMonth)
             targetClass == LocalDateTime::class && dbValue is String-> LocalDateTime.parse(dbValue, LOCAL_DATE_TIME_FMT)
+            targetClass == LocalDateTime::class && dbValue is org.joda.time.LocalDateTime-> LocalDateTime.of(dbValue.year, dbValue.monthOfYear, dbValue.dayOfMonth, dbValue.hourOfDay, dbValue.minuteOfHour, dbValue.secondOfMinute)
+
+            targetClass == org.joda.time.LocalDate::class && dbValue is org.joda.time.LocalDate -> dbValue
+            targetClass == org.joda.time.LocalDateTime::class && dbValue is org.joda.time.LocalDateTime -> dbValue
 
             // En GoKoan las KLocalDate se almacenan como String
             targetClass == KLocalDate::class && dbValue is String-> KLocalDate(dbValue)
