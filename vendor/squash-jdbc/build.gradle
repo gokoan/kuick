@@ -1,3 +1,0 @@
-dependencies {
-    jvmMainApi project(":vendor:squash-core")
-}
