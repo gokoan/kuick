@@ -1,6 +1,7 @@
 include ':kuick-core'
 include ':kuick-logging'
 include ':kuick-repositories-jasync-sql'
+include ':kuick-slackposter'
 
 include ':kuick-api-rpc'
 

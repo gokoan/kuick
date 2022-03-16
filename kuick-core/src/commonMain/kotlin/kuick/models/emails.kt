@@ -1,8 +1,8 @@
 package kuick.models
 
 
-data class Email(val email: String) {
-    fun normalized() = email.toLowerCase().trim()
+class Email(_email: String) {
+    val email: String = _email.toLowerCase().trim()
 
     fun validate() {
         if (!isValid()) error("Invalid email $this")
@@ -12,6 +12,17 @@ data class Email(val email: String) {
         if (this.email.length > 128) return false
         return this.email.matches(EMAIL_VALIDATION_REGEX)
     }
+
+    fun getName() = this.email.substringBefore('@')
+
+    override fun equals(other: Any?): Boolean = when (other) {
+        is Email -> other.email == email
+        else -> false
+    }
+
+    override fun hashCode(): Int = email.hashCode()
+
+    override fun toString(): String = email
 }
 
 // http://regexlib.com/Search.aspx?k=email&AspxAutoDetectCookieSupport=1

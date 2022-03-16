@@ -1,14 +1,80 @@
 package kuick.di
 
 import com.google.inject.*
-import kotlinx.coroutines.*
-import kuick.core.*
-import kuick.utils.*
-import kotlin.coroutines.*
+import com.google.inject.spi.InjectionPoint
+import javassist.ClassPool
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.withContext
+import kuick.annotations.StrImplementation
+import kuick.core.KuickInternal
+import kuick.utils.WeakProperty
+import java.util.*
+import kotlin.collections.LinkedHashSet
+import kotlin.coroutines.AbstractCoroutineContextElement
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 
-fun Guice(callback: Binder.() -> Unit): Injector = Guice.createInjector(object : Module {
+fun Guice(callback: Binder.() -> Unit): Injector = createGuiceInjectorEx(object : Module {
     override fun configure(binder: Binder) = callback(binder)
 })
+
+fun getValidClassOrNull(vararg names: String): Class<*>? {
+    for (name in names) {
+        try {
+            return Class.forName(name)
+        } catch (_: ClassNotFoundException) {
+        }
+    }
+    return null
+}
+
+fun getServiceClass(clazz: Class<*>): Class<*>? {
+    val baseName = clazz.canonicalName
+    return getValidClassOrNull(
+        "${baseName}Service",
+        "${baseName.removeSuffix("Api")}Service",
+        "${baseName.removeSuffix("Internal")}ApiService",
+        "${baseName.removeSuffix("Internal")}Service",
+    )
+}
+
+object GuiceEx {
+    @JvmStatic
+    fun transformConstructor(key: Key<*>, constructorInjector: InjectionPoint?): InjectionPoint? {
+        //println("GuiceEx.transformConstructor: $key, $constructorInjector")
+        val rawType = key.typeLiteral.rawType
+        if (constructorInjector == null && rawType.isInterface) {
+            val strImpl = rawType.getAnnotation(StrImplementation::class.java)
+            val serviceClass = strImpl?.fqname?.let { getValidClassOrNull(it) }
+                ?: getServiceClass(rawType)
+            //println("!! INTERFACE !! $rawType -> $serviceClass")
+            if (serviceClass != null) {
+                return InjectionPoint.forConstructorOf(serviceClass)
+            } else {
+                println("!! GuiceEx.transformConstructor.INTERFACE !! rawType=$rawType -> strImpl=$strImpl, serviceClass=$serviceClass")
+            }
+        }
+        return constructorInjector
+    }
+}
+
+private var guicePatched: Boolean = false
+
+fun createGuiceInjectorEx(modules: List<Module>): Injector {
+    if (!guicePatched) {
+        guicePatched = true
+        val pool: ClassPool = ClassPool.getDefault()
+        val cc = pool.get("com.google.inject.internal.ConstructorBindingImpl")
+        cc.defrost()
+        val m = cc.getDeclaredMethod("create")
+        m.insertBefore("{ constructorInjector = ${GuiceEx::class.java.name}.${GuiceEx::transformConstructor.name}(key, constructorInjector); }")
+        //cc.writeFile(".")
+        cc.toClass()
+    }
+
+    return Guice.createInjector(modules.distinct())
+}
+fun createGuiceInjectorEx(module: Module) = createGuiceInjectorEx(listOf(module))
 
 val Binder.registeredModules by WeakProperty { LinkedHashSet<Module>() }
 
@@ -60,7 +126,7 @@ inline fun <reified T : Any> Injector.getOrNull() = try {
     null
 }
 suspend fun <T> withInjectorContextNoIntercepted(injector: Injector, callback: suspend CoroutineScope.() -> T): T =
-        withContext(InjectorContext(injector)) { callback() }
+    withContext(InjectorContext(injector)) { callback() }
 suspend fun <T> withInjectorContextIntercepted(injector: Injector, callback: suspend CoroutineScope.() -> T) = injector.runWithInjector { callback(CoroutineScope(coroutineContext)) }
 
 @Deprecated("", ReplaceWith("withInjectorContextIntercepted(injector, callback)"))

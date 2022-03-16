@@ -1,6 +1,7 @@
 dependencies {
     jvmApi "com.google.code.gson:gson:$gson_version"
     jvmApi "com.google.inject:guice:$guice_version"
+    jvmApi "org.javassist:javassist:$javassist_version"
 
     jvmApi "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
     jsApi "org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$kotlinx_coroutines_version"
