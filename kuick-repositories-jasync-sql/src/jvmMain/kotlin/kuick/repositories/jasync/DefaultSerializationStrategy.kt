@@ -73,6 +73,11 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             objValue is Long || objValue is Float || objValue is Double
         -> objValue
 
+        // Los Joda time también se mapean tal cuál a jasync
+        objValue is org.joda.time.LocalDateTime -> objValue
+        objValue is org.joda.time.LocalDate -> objValue
+
+
         // Los IDs de kuick se mapean a String
         objValue is Id -> objValue.id
 
