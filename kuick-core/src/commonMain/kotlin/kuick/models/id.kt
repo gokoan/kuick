@@ -1,8 +1,11 @@
 package kuick.models
 
+import kuick.annotations.StrImplementation
+
 
 interface Id { val id: String }
 
+@StrImplementation("kuick.models.IdProviderJvm")
 interface IdProvider {
 
     fun randomId(): String

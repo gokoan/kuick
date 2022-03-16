@@ -90,15 +90,20 @@ object Json {
 
     val jsonParser: JsonParser = JsonParser()
 
-    val gson: Gson = GsonBuilder()
-            //.registerTypeHierarchyAdapter(Id::class.java, IdGsonAdapter())
-            //.registerTypeAdapter(CounterNumber::class.java, CounterNumberGsonAdapter())
-            .registerTypeAdapter(Date::class.java, DateAdapter())
-            .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter())
-            .registerTypeAdapter(LocalTime::class.java, LocalTimeAdapter())
-            .create()
+    private fun gsonBuilder() = GsonBuilder()
+        //.registerTypeHierarchyAdapter(Id::class.java, IdGsonAdapter())
+        //.registerTypeAdapter(CounterNumber::class.java, CounterNumberGsonAdapter())
+        .registerTypeAdapter(Date::class.java, DateAdapter())
+        .registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter())
+        .registerTypeAdapter(LocalTime::class.java, LocalTimeAdapter())
+
+    val gson: Gson = gsonBuilder().create()
+
+    val gsonPretty: Gson = gsonBuilder().setPrettyPrinting().create()
 
     fun <T : Any> toJson(any: T?): String = if (any == null) "null" else gson.toJson(any)
+
+    fun <T : Any> toPrettyJson(any: T?): String = if (any == null) "null" else gsonPretty.toJson(any)
 
     fun <T : Any> fromJson(@Language("JSON") json: String, clazz: Type): T {
         try {

@@ -30,6 +30,7 @@ subprojects {
     def multiProject = true
     def includeJs = isKuick
     def mustPublish = !project.path.startsWith(":samples")
+    //println(project.path)
 
     if (multiProject) {
         apply plugin: 'kotlin-multiplatform'
@@ -110,38 +111,18 @@ subprojects {
     }
 
     if (mustPublish) {
-        /*def publishUser = (rootProject.findProperty("BINTRAY_USER") ?: project.findProperty("bintrayUser") ?: System.getenv("BINTRAY_USER"))?.toString()
-        def publishPassword = (rootProject.findProperty("BINTRAY_KEY") ?: project.findProperty("bintrayApiKey") ?: System.getenv("BINTRAY_API_KEY"))?.toString()
-        println("Bintray publish: ${publishUser} / ${publishPassword}")
+        def publishUser = System.getenv("GH_USERNAME") ?: "<UNDEFINED_USERNAME>"
+        def publishPassword = System.getenv("GH_TOKEN") ?: "<UNDEFINED_PASSWORD>"
+        println("Maven publish: ${publishUser} / ${publishPassword}")
 
-        if (publishUser != null && publishPassword != null) {
-            publishing {
-                repositories {
-                    maven {
-                        credentials {
-                            username = publishUser
-                            password = publishPassword
-                        }
-                        url = uri("https://api.bintray.com/maven/nospoonlab/nospoonlab/${project.property("project.repository")}/")
-                    }
-                }
-                publications {
-                    kotlinMultiplatform {
-                        groupId = project.group
-                        artifactId = project.name
-                        version = project.version
-                    }
-                }
-            }
-        }*/
         publishing {
             repositories {
                 maven {
                     name = "GitHubPackages"
                     url = "https://maven.pkg.github.com/gokoan/kuick"
                     credentials {
-                        username = System.getenv("USERNAME")
-                        password = System.getenv("GITHUB_TOKEN")
+                        username = publishUser
+                        password = publishPassword
                     }
                 }
             }

@@ -1,9 +1,11 @@
 package kuick.models
 
+import kuick.annotations.StrImplementation
 import kotlin.math.round
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
+const val LEAP_HOUR = 4
 const val K_LOCAL_DATE_FORMAT = "yyyy-MM-dd"
 const val K_LOCAL_DATE_TIME_FORMAT = "YYYY-MM-DDTHH:mm:ss"
 data class KLocalDate(val date: String): Comparable<KLocalDate> {
@@ -16,11 +18,15 @@ data class KDateRange(val from: KLocalDate, val to: KLocalDate)
 
 fun KLocalDate?.normalized(): KLocalDate? = if (this?.date == null) null else this
 
+// @TODO: Should we use an expect class here?
+@StrImplementation("koan.domain.core.JVMTimeService")
 interface TimeService {
 
     fun systemTimeMillis(): Long
 
     fun now(): KLocalDate
+
+    fun studyDay(): KLocalDate
 
     fun dayOfWeekIndex(date: KLocalDate): Int
 

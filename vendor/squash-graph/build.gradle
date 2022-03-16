@@ -1,6 +1,0 @@
-dependencies {
-    jvmMainApi project(":vendor:squash-core")
-    jvmMainApi "net.bytebuddy:byte-buddy:$byte_buddy_version"
-    jvmTestApi project(":vendor:squash-core")
-    //jvmTestApi project(":vendor:squash-core").sourceSets.test.output
-}

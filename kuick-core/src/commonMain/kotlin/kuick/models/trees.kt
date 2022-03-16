@@ -20,7 +20,10 @@ fun <T: Any> NumberedTree<T>.findByNumber(_number: String, node: T = rootNode())
 }
 
 
+fun String.sectionLevel(): Int = if (this == "") 0 else this.count { it == '.' } + 1
 fun String.parentNumber() = substringBeforeLast('.')
+fun String.parentLessonNumber(): String = if (this.sectionLevel() > 2) this.split(".").take(2).joinToString(".") else this
+
 fun <T: Any> NumberedTree<T>.isRoot(node: T) = node.nodeNumber() == ""
 fun <T: Any> NumberedTree<T>.hasChildren(node: T) = node.nodeChildren().isNotEmpty()
 

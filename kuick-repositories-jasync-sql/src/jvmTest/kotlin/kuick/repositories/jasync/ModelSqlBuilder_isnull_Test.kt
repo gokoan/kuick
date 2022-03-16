@@ -15,6 +15,12 @@ class ModelSqlBuilder_isnull_Test {
         assertEquals("surname IS NULL", mq.toSql( User::surname.isNull() ))
     }
 
+    // Aunque el isNull() funione, esto no debe fallar tampoco
+    @Test
+    fun `eq null operator`() {
+        assertEquals("surname IS NULL", mq.toSql( User::surname eq null ))
+    }
+
     @Test
     fun `select isNull operator`() {
         assertEquals("SELECT name, surname FROM user WHERE (surname IS NULL) AND (name = 'Mike')", mq.selectSql((User::surname.isNull()) and (User::name eq "Mike")))
@@ -23,6 +29,7 @@ class ModelSqlBuilder_isnull_Test {
             mq.selectPreparedSql((User::surname.isNull()) and (User::name eq "Mike"))
         )
     }
+
 
 
     @Test
