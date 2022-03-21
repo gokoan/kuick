@@ -6,25 +6,90 @@ name: Gradle Package
 on:
   release:
     types: [created]
+
 jobs:
   build:
 
     runs-on: ubuntu-latest
 
     steps:
+    # --------------------- DELETE KUICK-CORE
+    - uses: actions/delete-package-versions@v1
+      with:
+        package-name: 'com.gokoan.kuick-core'
+    - uses: actions/delete-package-versions@v1
+      with:
+        package-name: 'com.gokoan.kuick-core-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+        package-name: 'com.gokoan.kuick-core-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-core-jvm'
+    # --------------------- DELETE KUICK-LOGGING
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-logging-jvm'
+    # --------------------- DELETE KUICK-API-RPC
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-api-rpc'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-api-rpc-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-api-rpc-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-api-rpc-jvm'
+    # --------------------- DELETE KUICK-API-RPC
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-jasync-sql'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-jasync-sql-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-jasync-sql-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-repositories-jasync-sql-jvm'
+
+    # --------------------- DELETE KUICK-SLACKPOSTER
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-slackposter'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-slackposter-js'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-slackposter-metadata'
+    - uses: actions/delete-package-versions@v1
+      with:
+          package-name: 'com.gokoan.kuick-slackposter-jvm'
+
+
+    # --------------------- CHECKOUT and PUBLISH
     - uses: actions/checkout@v2
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
       with:
         java-version: 1.8
-        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-        settings-path: ${{ github.workspace }} # location for the settings.xml file
-
-
-    # The USERNAME and TOKEN need to correspond to the credentials environment variables used in
-    # the publishing section of your build.gradle
-    - name: Publish to GitHub Packages
-      run: gradle publish
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Publish with Gradle
+      run: ./gradlew publish
       env:
-        USERNAME: ${{ github.actor }}
-        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
