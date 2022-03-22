@@ -1,10 +1,8 @@
-package kuick.repositories.jasync
+package kuick.repositories.sql
 
 import kuick.models.Id
 import kuick.repositories.eq
-import kotlin.reflect.full.defaultType
 import kotlin.reflect.full.starProjectedType
-import kotlin.reflect.typeOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

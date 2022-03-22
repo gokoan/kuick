@@ -1,9 +1,10 @@
 package kuick.di
 
-import org.junit.Test
 import kotlin.test.*
 
 class InjectorTest {
+
+    @Ignore
     @Test
     fun test() {
         class Dep1

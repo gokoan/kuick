@@ -1,4 +1,4 @@
-package kuick.repositories.jasync
+package kuick.repositories.sql
 
 import kuick.models.Id
 import kuick.repositories.AttributedModelQuery

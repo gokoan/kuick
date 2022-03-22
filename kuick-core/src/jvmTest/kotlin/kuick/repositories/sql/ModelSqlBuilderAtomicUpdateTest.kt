@@ -1,4 +1,4 @@
-package kuick.repositories.jasync
+package kuick.repositories.sql
 
 import kuick.repositories.eq
 import kotlin.test.Test

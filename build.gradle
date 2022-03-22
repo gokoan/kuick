@@ -41,7 +41,7 @@ subprojects {
                     kotlinOptions {
                         jvmTarget = "1.8"
                         suppressWarnings = true
-                        apiVersion = "1.3"
+                        apiVersion = "1.4"
                         freeCompilerArgs = ["-Xallow-kotlin-package"]
                     }
                 }

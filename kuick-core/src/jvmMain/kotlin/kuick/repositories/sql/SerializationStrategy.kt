@@ -1,4 +1,4 @@
-package kuick.repositories.jasync
+package kuick.repositories.sql
 
 import kotlin.reflect.KClass
 import kotlin.reflect.KType

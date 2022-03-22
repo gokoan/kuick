@@ -1,4 +1,4 @@
-package kuick.repositories.jasync
+package kuick.repositories.sql
 
 import com.google.gson.*
 import kuick.json.DateAdapter

@@ -7,5 +7,7 @@ dependencies {
     jsApi "org.jetbrains.kotlinx:kotlinx-coroutines-core-js:$kotlinx_coroutines_version"
     commonMainApi "org.jetbrains.kotlinx:kotlinx-coroutines-core-common:$kotlinx_coroutines_version"
 
+    jvmMainApi "joda-time:joda-time:$joda_version"
+
 
 }

@@ -1,8 +1,6 @@
-package kuick.repositories.jasync
+package kuick.repositories.sql
 
 import kuick.models.Id
-import kuick.repositories.eq
-import java.time.LocalDate
 import java.time.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -6,6 +6,8 @@ import kotlin.test.*
 
 @UseExperimental(KuickInternal::class)
 class PerCoroutineJobTest {
+
+    @Ignore
     @Test
     fun test() {
         runBlocking {

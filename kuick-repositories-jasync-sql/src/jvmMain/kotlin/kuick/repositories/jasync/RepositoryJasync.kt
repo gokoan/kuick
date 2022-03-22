@@ -3,6 +3,9 @@ package kuick.repositories.jasync
 import com.github.jasync.sql.db.QueryResult
 import kuick.repositories.ModelQuery
 import kuick.repositories.Repository
+import kuick.repositories.sql.DefaultSerializationStrategy
+import kuick.repositories.sql.ModelSqlBuilder
+import kuick.repositories.sql.SerializationStrategy
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
