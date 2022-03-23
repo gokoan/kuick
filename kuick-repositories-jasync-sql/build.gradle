@@ -1,6 +1,5 @@
 dependencies {
     commonMainApi project(":kuick-core")
-    commonMainApi project(":kuick-logging")
 
     jvmMainApi "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version"
     jvmMainApi "org.jetbrains.kotlin:kotlin-reflect"

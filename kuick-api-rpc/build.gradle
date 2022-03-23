@@ -1,6 +1,5 @@
 dependencies {
     commonMainApi project(":kuick-core")
-    commonMainApi project(":kuick-logging")
 
     jvmMainApi "io.ktor:ktor-server-cio:$ktor_version"
 

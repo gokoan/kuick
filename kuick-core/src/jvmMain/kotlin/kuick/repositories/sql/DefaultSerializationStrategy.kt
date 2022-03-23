@@ -11,6 +11,7 @@ import java.lang.reflect.Type
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.reflect.KClass
@@ -29,12 +30,16 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         val targetClass: KClass<*> = kType.classifier as KClass<*>
         val out = when {
             dbValue == null -> null
+
+            fromDatabaseValueExtension(targetClass, dbValue) != null -> fromDatabaseValueExtension(targetClass, dbValue)
+
             targetClass == String::class -> dbValue
             targetClass == Long::class -> dbValue
             targetClass == Boolean::class -> dbValue
             targetClass == Int::class && dbValue is Number -> dbValue.toInt()
             targetClass == Double::class && dbValue is Number -> dbValue.toDouble()
             targetClass == Float::class -> dbValue
+            targetClass == UUID::class -> dbValue
 
             // Los IDs
             targetClass.isSubclassOf(Id::class) ->
@@ -49,6 +54,8 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             targetClass == LocalDateTime::class && dbValue is String-> LocalDateTime.parse(dbValue, LOCAL_DATE_TIME_FMT)
             targetClass == LocalDateTime::class && dbValue is org.joda.time.LocalDateTime-> LocalDateTime.of(dbValue.year, dbValue.monthOfYear, dbValue.dayOfMonth, dbValue.hourOfDay, dbValue.minuteOfHour, dbValue.secondOfMinute)
 
+            // Tipos que se mantienen
+            targetClass == OffsetDateTime::class && dbValue is OffsetDateTime -> dbValue
             targetClass == org.joda.time.LocalDate::class && dbValue is org.joda.time.LocalDate -> dbValue
             targetClass == org.joda.time.LocalDateTime::class && dbValue is org.joda.time.LocalDateTime -> dbValue
 
@@ -66,17 +73,24 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         return out
     }
 
+    open fun fromDatabaseValueExtension(targetClass: KClass<*>, dbValue: Any?): Any? = null
+
+    open fun toDatabaseValueExtension(objValue: Any?): Any? = null
+
 
     override fun toDatabaseValue(objValue: Any?): Any? = when {
+
+        toDatabaseValueExtension(objValue) != null -> toDatabaseValueExtension(objValue)
+
         // Los tipos básicos se mapean al mismo tipo en BBDD
         objValue == null || objValue is String || objValue is Boolean || objValue is Int ||
-            objValue is Long || objValue is Float || objValue is Double
+            objValue is Long || objValue is Float || objValue is Double || objValue is UUID
         -> objValue
 
         // Los Joda time también se mapean tal cuál a jasync
+        objValue is OffsetDateTime -> objValue
         objValue is org.joda.time.LocalDateTime -> objValue
         objValue is org.joda.time.LocalDate -> objValue
-
 
         // Los IDs de kuick se mapean a String
         objValue is Id -> objValue.id
