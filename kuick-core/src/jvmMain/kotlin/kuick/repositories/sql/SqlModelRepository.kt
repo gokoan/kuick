@@ -1,9 +1,6 @@
 package kuick.repositories.sql
 
-import kuick.repositories.GroupBy
-import kuick.repositories.ModelQuery
-import kuick.repositories.ModelRepository
-import kuick.repositories.eq
+import kuick.repositories.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
@@ -98,10 +95,12 @@ abstract class SqlModelRepository<I : Any, T : Any>(
     override suspend fun groupBy(
         select: List<GroupBy<T>>,
         groupBy: List<KProperty1<T, *>>,
-        q: ModelQuery<T>
+        where: ModelQuery<T>,
+        orderBy: OrderByDescriptor<T>?,
+        limit: Int?
     ): List<List<Any?>> {
         init()
-        return mqb.groupByPreparedSql(select, groupBy, q).execute().rows
+        return mqb.groupByPreparedSql(select, groupBy, where, orderBy, limit).execute().rows
     }
 
     private suspend fun checkTableSchema() {
