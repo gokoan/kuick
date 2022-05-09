@@ -10,6 +10,8 @@ interface Repository<T : Any> {
 
     suspend fun count(q: ModelQuery<T>): Int
 
+    suspend fun groupBy(select: List<GroupBy<T>>, groupBy: List<KProperty1<T, *>>, q: ModelQuery<T>): List<List<Any?>>
+
     suspend fun findBy(q: ModelQuery<T>): List<T>
 
     suspend fun findBy(q: ModelQuery<T>, skip: Long = 0L, limit: Int? = null, orderBy: OrderByDescriptor<T>? = null): List<T> =

@@ -1,6 +1,7 @@
 package kuick.repositories.jasync
 
 import com.github.jasync.sql.db.QueryResult
+import kuick.repositories.GroupBy
 import kuick.repositories.ModelQuery
 import kuick.repositories.Repository
 import kuick.repositories.sql.DefaultSerializationStrategy
@@ -73,4 +74,12 @@ open class RepositoryJasync<T : Any>(
         return mqb.countPreparedSql(q).execute().rows.firstOrNull()?.get(0)?.toString()?.toInt() ?: 0
     }
 
+    override suspend fun groupBy(
+        select: List<GroupBy<T>>,
+        groupBy: List<KProperty1<T, *>>,
+        q: ModelQuery<T>
+    ): List<List<Any?>> {
+        init()
+        return mqb.groupByPreparedSql(select, groupBy, q).execute().rows
+    }
 }

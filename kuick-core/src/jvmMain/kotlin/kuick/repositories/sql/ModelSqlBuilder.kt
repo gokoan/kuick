@@ -98,6 +98,17 @@ class ModelSqlBuilder<T: Any>(
     fun countPreparedSql(q: ModelQuery<T>): PreparedSql =
         PreparedSql("SELECT COUNT(*) FROM $tableName WHERE ${toSql(q, this::toSlotValue)}", queryValues(q))
 
+
+    fun groupByPreparedSql(select: List<GroupBy<T>>,
+                           groupBy: List<KProperty1<T, *>>,
+                           where: ModelQuery<T>): PreparedSql {
+        val select = (groupBy.map { it.name.toSnakeCase() } +
+            select.map { "${it.operator.name}(${it.prop.name.toSnakeCase()})" }
+            ).joinToString(", ")
+
+        return PreparedSql("SELECT $select FROM $tableName WHERE ${toSql(where, this::toSlotValue)}", queryValues(where))
+    }
+
     fun <T: Any> toSql(q: ModelQuery<T>, toSqlValue: (Any?) -> String = this::toSqlValue): String = when {
         q is FieldIsNull<T, *> -> "${q.field.name.toSnakeCase()} IS NULL"
         q is FieldWithin<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
