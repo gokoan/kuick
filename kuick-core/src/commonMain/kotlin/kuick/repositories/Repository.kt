@@ -13,7 +13,7 @@ interface Repository<T : Any> {
     suspend fun groupBy(
         select: List<GroupBy<T>>,
         groupBy: List<KProperty1<T, *>>,
-        where: ModelQuery<T>,
+        where: ModelQuery<T>?,
         orderBy: OrderByDescriptor<T>? = null,
         limit: Int? = null,
     ): List<List<Any?>>

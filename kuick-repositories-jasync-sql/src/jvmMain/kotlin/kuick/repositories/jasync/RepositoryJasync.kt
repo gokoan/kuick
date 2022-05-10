@@ -78,7 +78,7 @@ open class RepositoryJasync<T : Any>(
     override suspend fun groupBy(
         select: List<GroupBy<T>>,
         groupBy: List<KProperty1<T, *>>,
-        where: ModelQuery<T>,
+        where: ModelQuery<T>?,
         orderBy: OrderByDescriptor<T>?,
         limit: Int?
     ): List<List<Any?>> {
