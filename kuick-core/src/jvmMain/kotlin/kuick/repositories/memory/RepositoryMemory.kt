@@ -74,6 +74,16 @@ open class RepositoryMemory<T : Any>(
         return table.filter { it.match(q) }.size
     }
 
+    override suspend fun groupBy(
+        select: List<GroupBy<T>>,
+        groupBy: List<KProperty1<T, *>>,
+        where: ModelQuery<T>?,
+        orderBy: OrderByDescriptor<T>?,
+        limit: Int?
+    ): List<List<Any?>> {
+        TODO("Not yet implemented")
+    }
+
     protected fun T.match(q: ModelQuery<T>): Boolean = when (q) {
         is FieldUnop<T, *> -> {
             when (q) {

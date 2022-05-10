@@ -24,12 +24,12 @@ class ModelSqlBuilder<T: Any>(
 
     val modelColumns = modelFields.map { it.name.toSnakeCase() }
 
-    protected val selectColumns = modelColumns.joinToString(", ")
+    protected val selectColumns = modelColumns.csv()
 
     protected val insertColumns = selectColumns
-    protected val insertValueSlots = modelColumns.map { "?" }.joinToString(", ")
+    protected val insertValueSlots = modelColumns.map { "?" }.csv()
 
-    protected val updateColumns = modelColumns.map { "$it = ?" }.joinToString(", ")
+    protected val updateColumns = modelColumns.map { "$it = ?" }.csv()
 
     protected val selectBase = "SELECT $selectColumns FROM $tableName"
 
@@ -46,7 +46,7 @@ class ModelSqlBuilder<T: Any>(
         val extraSql = mutableListOf<String>()
 
         q.tryGetAttributed()?.let { q ->
-            if (q.orderBy != null) extraSql.add("ORDER BY ${q.orderBy!!.list.map { "${it.prop.name.toSnakeCase()} ${if (it.ascending) "ASC" else "DESC"}" }.joinToString(", ")}")
+            if (q.orderBy != null) extraSql.add("ORDER BY ${q.orderBy!!.list.map { "${it.prop.name.toSnakeCase()} ${if (it.ascending) "ASC" else "DESC"}" }.csv()}")
             if (q.skip > 0) extraSql.add("OFFSET ${q.skip}")
             if (q.limit != null) extraSql.add("LIMIT ${q.limit}")
         }
@@ -59,7 +59,7 @@ class ModelSqlBuilder<T: Any>(
         PreparedSql(insertSql, valuesOf(t))
 
     fun insertManySql(ts: Collection<T>): String =
-        "INSERT INTO $tableName ($insertColumns) VALUES ${ts.map { "(${valuesOf(it).map { toSqlValue(it) }.joinToString(", ")})" }.joinToString(", ")}"
+        "INSERT INTO $tableName ($insertColumns) VALUES ${ts.map { "(${valuesOf(it).map { toSqlValue(it) }.csv()})" }.csv()}"
 
     fun updateSql(q: ModelQuery<T>) = "UPDATE $tableName SET $updateColumns WHERE ${toSql(q, this::toSqlValue)}"
 
@@ -70,7 +70,7 @@ class ModelSqlBuilder<T: Any>(
     fun updateManyPreparedSql(ts: Collection<Pair<T, ModelQuery<T>>>): String =
         ts.map { (t, q) ->
             "UPDATE $tableName " +
-                "SET ${modelColumns.mapIndexed { index, s -> "$s = ${toSqlValue(valuesOf(t)[index])}" }.joinToString(", ")} " +
+                "SET ${modelColumns.mapIndexed { index, s -> "$s = ${toSqlValue(valuesOf(t)[index])}" }.csv()} " +
                 "WHERE ${toSql(q, this::toSqlValue)};"
         }.joinToString (separator = " ")
 
@@ -85,7 +85,7 @@ class ModelSqlBuilder<T: Any>(
 
         val setValues = setPairs.map { prepareToSetCommand(it.value) } + incPairs.map { prepareToSetCommand(it.value) }
 
-        return PreparedSql("UPDATE $tableName SET ${setClause.joinToString(", ")} WHERE ${toSql(where, this::toSlotValue)}", setValues + queryValues(where))
+        return PreparedSql("UPDATE $tableName SET ${setClause.csv()} WHERE ${toSql(where, this::toSlotValue)}", setValues + queryValues(where))
     }
 
     private fun prepareToSetCommand(value: Any?) = if (value is Id) value.id else value
@@ -98,10 +98,37 @@ class ModelSqlBuilder<T: Any>(
     fun countPreparedSql(q: ModelQuery<T>): PreparedSql =
         PreparedSql("SELECT COUNT(*) FROM $tableName WHERE ${toSql(q, this::toSlotValue)}", queryValues(q))
 
+
+    fun groupByPreparedSql(select: List<GroupBy<T>>,
+                           groupBy: List<KProperty1<T, *>>,
+                           where: ModelQuery<T>? = null,
+                           orderBy: OrderByDescriptor<T>? = null,
+                           limit: Int? = null
+    ): PreparedSql {
+        val sqlParts = mutableListOf<String>()
+
+        sqlParts.add("SELECT " + (groupBy.map { it.name.toSnakeCase() } +
+            select.map { "${it.operator.name}(${it.prop.name.toSnakeCase()})" }
+            ).csv())
+
+        sqlParts.add("FROM $tableName")
+
+        where?.let { sqlParts.add("WHERE ${toSql(where, this::toSlotValue)}") }
+
+        sqlParts.add("GROUP BY ${groupBy.map { it.name.toSnakeCase() }.csv()}")
+
+        orderBy?.let {
+            sqlParts.add("ORDER BY ${orderBy.list.map { "${it.prop.name.toSnakeCase()} ${if (it.ascending) "ASC" else "DESC"}" }.csv()}")
+        }
+        limit?.let { sqlParts.add("LIMIT $limit") }
+
+        return PreparedSql(sqlParts.joinToString(" "), where?.let { queryValues(where) } ?: emptyList())
+    }
+
     fun <T: Any> toSql(q: ModelQuery<T>, toSqlValue: (Any?) -> String = this::toSqlValue): String = when {
         q is FieldIsNull<T, *> -> "${q.field.name.toSnakeCase()} IS NULL"
-        q is FieldWithin<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
-        q is FieldWithinComplex<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.joinToString(", ")})"
+        q is FieldWithin<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.csv()})"
+        q is FieldWithinComplex<T, *> -> "${q.field.name.toSnakeCase()} in (${(q.value ?: emptySet()).map { toSqlValue(it) }.csv()})"
         q is FieldLike<T> -> "${q.field.name.toSnakeCase()} ILIKE ${toSqlValue(q.value)}"
         q is FilterExpUnopLogic<T> -> "${q.op}(${toSql(q.exp, toSqlValue)})"
 
@@ -154,5 +181,7 @@ class ModelSqlBuilder<T: Any>(
     private fun String.toSnakeCase(): String = flatMap {
         if (it.isUpperCase()) listOf('_', it.toLowerCase()) else listOf(it)
     }.joinToString("")
+
+    private fun List<String>.csv() = joinToString(", ")
 
 }

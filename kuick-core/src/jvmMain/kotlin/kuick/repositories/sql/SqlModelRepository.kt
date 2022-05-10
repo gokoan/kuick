@@ -1,8 +1,6 @@
 package kuick.repositories.sql
 
-import kuick.repositories.ModelQuery
-import kuick.repositories.ModelRepository
-import kuick.repositories.eq
+import kuick.repositories.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
@@ -92,6 +90,17 @@ abstract class SqlModelRepository<I : Any, T : Any>(
     override suspend fun count(q: ModelQuery<T>): Int {
         init()
         return mqb.countPreparedSql(q).execute().rows.firstOrNull()?.get(0)?.toString()?.toInt() ?: 0
+    }
+
+    override suspend fun groupBy(
+        select: List<GroupBy<T>>,
+        groupBy: List<KProperty1<T, *>>,
+        where: ModelQuery<T>?,
+        orderBy: OrderByDescriptor<T>?,
+        limit: Int?
+    ): List<List<Any?>> {
+        init()
+        return mqb.groupByPreparedSql(select, groupBy, where, orderBy, limit).execute().rows
     }
 
     private suspend fun checkTableSchema() {

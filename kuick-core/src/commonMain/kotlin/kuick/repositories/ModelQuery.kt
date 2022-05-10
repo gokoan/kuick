@@ -24,6 +24,18 @@ operator fun <T> OrderByDescriptor<T>.plus(other: OrderByDescriptor<T>) = OrderB
 fun <T> KProperty1<T, Any?>.asc(): OrderByDescriptor<T> = OrderBy(this, ascending = true)
 fun <T> KProperty1<T, Any?>.desc(): OrderByDescriptor<T> = OrderBy(this, ascending = false)
 
+
+data class GroupBy<T>(val prop: KProperty1<T, *>, val operator: GroupOperator)
+enum class GroupOperator { COUNT, SUM, AVG, MAX, MIN }
+
+fun <T> KProperty1<T, Any?>.count(): GroupBy<T> = GroupBy(this, operator = GroupOperator.COUNT)
+fun <T> KProperty1<T, Any?>.sum(): GroupBy<T> = GroupBy(this, operator = GroupOperator.SUM)
+fun <T> KProperty1<T, Any?>.avg(): GroupBy<T> = GroupBy(this, operator = GroupOperator.AVG)
+fun <T> KProperty1<T, Any?>.max(): GroupBy<T> = GroupBy(this, operator = GroupOperator.MAX)
+fun <T> KProperty1<T, Any?>.min(): GroupBy<T> = GroupBy(this, operator = GroupOperator.MIN)
+
+
+
 open class DecoratedModelQuery<T : Any>(val base: ModelQuery<T>) : ModelQuery<T>()
 
 class AttributedModelQuery<T : Any>(base: ModelQuery<T>, val skip: Long = 0L, val limit: Int? = null, val orderBy: OrderByDescriptor<T>? = null) : DecoratedModelQuery<T>(base)
