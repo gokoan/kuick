@@ -5,6 +5,7 @@ import kuick.repositories.*
 import java.util.Comparator
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.javaField
 
 
@@ -62,6 +63,22 @@ open class RepositoryMemory<T : Any>(
             }
         }
         return rows
+    }
+
+    private val modelClassFieldByName = modelClass.declaredMemberProperties.map { Pair(it.name, it) }.toMap()
+
+    override suspend fun <P : Any> findProyectionBy(
+        select: KClass<P>,
+        where: ModelQuery<T>,
+        limit: Int?,
+        orderBy: OrderByDescriptor<T>?
+    ): List<P> {
+        val all = find(AttributedModelQuery(where, limit = limit, orderBy = orderBy))
+        val constructor = select.constructors.first()
+        return all.map { data ->
+            val projectedValues = constructor.parameters.map { modelClassFieldByName[it.name]?.get(data) }
+            constructor.call(*projectedValues.toTypedArray())
+        }
     }
 
     override suspend fun getAll(): List<T> {

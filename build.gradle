@@ -111,9 +111,9 @@ subprojects {
     }
 
     if (mustPublish) {
-        def publishUser = System.getenv("GH_USERNAME") ?: "<UNDEFINED_USERNAME>"
-        def publishPassword = System.getenv("GH_TOKEN") ?: "<UNDEFINED_PASSWORD>"
-        println("Maven publish: ${publishUser} / ${publishPassword}")
+        def publishUser = System.getenv("GH_USERNAME") ?: project.findProperty("GH_USERNAME")?.toString()
+        def publishPassword = System.getenv("GH_TOKEN") ?: project.findProperty("GH_TOKEN")?.toString()
+        //println("Maven publish: ${publishUser} / ${publishPassword}")
 
         publishing {
             repositories {

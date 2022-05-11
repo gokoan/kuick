@@ -39,7 +39,13 @@ class ModelSqlBuilder<T: Any>(
 
     fun checkTableSchema() = "$selectBase LIMIT 1" // Select básico con 1 row máximo
 
-    fun <A: Any> selectPreparedSql(q: ModelQuery<A>): PreparedSql = selectPreparedSql(selectBase, q)
+    fun <A: Any> selectPreparedSql(q: ModelQuery<A>, projection: KClass<*> = kClass): PreparedSql {
+        val selectClause = if (projection == kClass) selectBase else {
+            val selectColumns = projection.java.nonStaticFields().map { it.name.toSnakeCase() }.csv()
+            "SELECT $selectColumns FROM $tableName"
+        }
+        return selectPreparedSql(selectClause, q)
+    }
 
     private fun <A: Any> selectPreparedSql(selectBase: String, q: ModelQuery<A>): PreparedSql {
         val base = PreparedSql("$selectBase WHERE ${toSql(q, this::toSlotValue)}", queryValues(q))

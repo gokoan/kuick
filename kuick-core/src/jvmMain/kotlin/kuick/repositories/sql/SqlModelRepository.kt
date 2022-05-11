@@ -79,12 +79,25 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         return mqb
             .selectPreparedSql(q)
             .execute()
-            .toModelList()
+            .toModelList(modelClass)
+    }
+
+    override suspend fun <P : Any> findProyectionBy(
+        select: KClass<P>,
+        where: ModelQuery<T>,
+        limit: Int?,
+        orderBy: OrderByDescriptor<T>?
+    ): List<P> {
+        init()
+        return mqb
+            .selectPreparedSql(where)
+            .execute()
+            .toModelList(select)
     }
 
     override suspend fun getAll(): List<T> {
         init()
-        return query(mqb.selectAll()).toModelList()
+        return query(mqb.selectAll()).toModelList(modelClass)
     }
 
     override suspend fun count(q: ModelQuery<T>): Int {
@@ -112,9 +125,9 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         return prepQuery(sql, values)
     }
 
-    private fun SqlQueryResults.toModelList(): List<T> =
+    private fun <P: Any> SqlQueryResults.toModelList(toClass: KClass<P>): List<P> =
         rows.map { row ->
-            mqb.serializationStrategy.modelFromValues(modelClass, (0 until row.size).map { i -> row[i] })
+            mqb.serializationStrategy.modelFromValues(toClass, (0 until row.size).map { i -> row[i] })
         }
 
     //--------------------
