@@ -1,5 +1,7 @@
 package kuick.json
 
+import com.google.common.reflect.TypeParameter
+import com.google.common.reflect.TypeToken
 import com.google.gson.*
 import org.intellij.lang.annotations.Language
 import java.lang.reflect.Type
@@ -140,6 +142,23 @@ object Json {
             throw t
         }
     }
+
+    fun <T : Any> fromJsonArray(json: String, clazz: Class<T>): List<T> {
+        try {
+            return gson.fromJson(json, typedListType(clazz))
+        } catch (t: Throwable) {
+            println("ERROR parsing JSON: $clazz <-- $json")
+            throw t
+        }
+    }
+
+
+    fun <T> typedListType(innerType: Class<T>?): Type {
+        return object : TypeToken<List<T>?>() {}
+            .where(object : TypeParameter<T>() {}, innerType)
+            .getType()
+    }
+
 
     inline fun <reified T : Any> fromJson(json: String): T {
         try {

@@ -57,17 +57,30 @@ open class RepositoryJasync<T : Any>(
         init()
         return mqb
             .selectPreparedSql(q)
-            .execute().toModelList()
+            .execute().toModelList(modelClass)
     }
 
 
-    private fun QueryResult.toModelList(): List<T> = rows.map { row ->
-        mqb.serializationStrategy.modelFromValues(modelClass, (0 until row.size).map { i -> row[i] } )
+    override suspend fun <P : Any> findProyectionBy(
+        select: KClass<P>,
+        where: ModelQuery<T>,
+        limit: Int?,
+        orderBy: OrderByDescriptor<T>?
+    ): List<P> {
+        init()
+        return mqb
+            .selectPreparedSql(where)
+            .execute()
+            .toModelList(select)
+    }
+
+    private fun <P: Any> QueryResult.toModelList(toClass: KClass<P>): List<P> = rows.map { row ->
+        mqb.serializationStrategy.modelFromValues(toClass, (0 until row.size).map { i -> row[i] })
     }
 
     override suspend fun getAll(): List<T> {
         init()
-        return pool.query(mqb.selectAll()).toModelList()
+        return pool.query(mqb.selectAll()).toModelList(modelClass)
     }
 
     override suspend fun count(q: ModelQuery<T>): Int {

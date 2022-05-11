@@ -1,5 +1,6 @@
 package kuick.repositories
 
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
 interface Repository<T : Any> {
@@ -19,6 +20,13 @@ interface Repository<T : Any> {
     ): List<List<Any?>>
 
     suspend fun findBy(q: ModelQuery<T>): List<T>
+
+    suspend fun <P:Any> findProyectionBy(
+        select: KClass<P>,
+        where: ModelQuery<T>,
+        limit: Int? = null,
+        orderBy: OrderByDescriptor<T>? = null
+    ): List<P>
 
     suspend fun findBy(q: ModelQuery<T>, skip: Long = 0L, limit: Int? = null, orderBy: OrderByDescriptor<T>? = null): List<T> =
         findBy(AttributedModelQuery(base = q, skip = skip, limit = limit, orderBy = orderBy))
