@@ -13,7 +13,7 @@ interface SerializationStrategy {
     /**
      * Convierte un valor [objValue] del objeto al tipo que queremos almacenar en la BBDD
      */
-    fun toDatabaseValue(objValue: Any?): Any?
+    fun toDatabaseValue(objValue: Any?, annotations: List<Annotation> = listOf()): Any?
 
 
 

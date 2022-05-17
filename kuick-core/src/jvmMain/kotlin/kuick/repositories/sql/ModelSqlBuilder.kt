@@ -162,16 +162,16 @@ class ModelSqlBuilder<T: Any>(
     }
 
 
-    fun valuesOf(t: T): List<Any?> = modelProperties.map { prop -> toDb(prop.get(t)) }
+    fun valuesOf(t: T): List<Any?> = modelProperties.map { prop -> toDb(prop.annotations, prop.get(t)) }
 
 
     fun <T: Any> queryValues(q: ModelQuery<T>): List<Any?> = when (q) {
         is FieldIsNull<T, *> -> emptyList()
-        is FieldWithin<T, *> -> q.value?.map { toDb(it) } ?: emptyList()
-        is FieldWithinComplex<T, *> -> q.value?.map { toDb(it) } ?: emptyList()
+        is FieldWithin<T, *> -> q.value?.map { toDb(q.field.annotations,it) } ?: emptyList()
+        is FieldWithinComplex<T, *> -> q.value?.map { toDb(q.field.annotations,it) } ?: emptyList()
         is FilterExpUnopLogic<T> -> queryValues(q.exp)
 
-        is SimpleFieldBinop<T, *> -> listOf(toDb(q.value))
+        is SimpleFieldBinop<T, *> -> listOf(toDb(q.field.annotations,q.value))
         is FilterExpAnd<T> -> queryValues(q.left) + queryValues(q.right)
         is FilterExpOr<T> -> queryValues(q.left) + queryValues(q.right)
 
@@ -181,7 +181,7 @@ class ModelSqlBuilder<T: Any>(
         else -> throw NotImplementedError("Missing implementation of .toSql() for ${q}")
     }
 
-    private inline fun toDb(value: Any?): Any? = serializationStrategy.toDatabaseValue(value)
+    private inline fun toDb(annotations: List<Annotation>, value: Any?): Any? = serializationStrategy.toDatabaseValue(value, annotations)
 
 
     private fun String.toSnakeCase(): String = flatMap {

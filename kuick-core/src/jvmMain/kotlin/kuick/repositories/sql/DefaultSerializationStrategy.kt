@@ -7,6 +7,7 @@ import kuick.json.LocalTimeAdapter
 import kuick.models.Email
 import kuick.models.Id
 import kuick.models.KLocalDate
+import kuick.repositories.sql.annotations.AsArray
 import java.lang.reflect.Type
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -16,7 +17,9 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
+import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
 import kotlin.reflect.jvm.javaType
 
@@ -40,6 +43,8 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             targetClass == Double::class && dbValue is Number -> dbValue.toDouble()
             targetClass == Float::class -> dbValue
             targetClass == UUID::class -> dbValue
+
+            targetClass == List::class && dbValue is List<*> -> dbValue
 
             // Los IDs
             targetClass.isSubclassOf(Id::class) ->
@@ -78,7 +83,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
     open fun toDatabaseValueExtension(objValue: Any?): Any? = null
 
 
-    override fun toDatabaseValue(objValue: Any?): Any? = when {
+    override fun toDatabaseValue( objValue: Any?, annotations: List<Annotation>): Any? = when {
 
         toDatabaseValueExtension(objValue) != null -> toDatabaseValueExtension(objValue)
 
@@ -105,6 +110,11 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         objValue is KLocalDate -> objValue.toString()
 
         objValue.javaClass.isEnum -> (objValue as Enum<*>).name
+
+
+        objValue is List<*> &&  annotations.any { it is AsArray } -> dbJson.toJson(objValue)
+            .replace('[','{')
+            .replace(']','}')
 
         // El resto lo mapeamos a JSON
         else -> dbJson.toJson(objValue)
