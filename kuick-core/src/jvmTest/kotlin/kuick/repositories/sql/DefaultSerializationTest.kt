@@ -1,7 +1,14 @@
 package kuick.repositories.sql
 
 import kuick.models.Id
+import kuick.repositories.annotations.DbName
+import kuick.repositories.annotations.Index
 import kuick.repositories.eq
+import kuick.repositories.sql.annotations.AsArray
+import java.util.*
+import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.starProjectedType
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -27,6 +34,16 @@ class DefaultSerializationTest {
         THREE
     }
 
+
+    data class TestArrays(
+        val id: String,
+        @AsArray val values: List<UUID>)
+
+
+    val dataWithArray = TestArrays("someId",listOf(
+        UUID.fromString("a931017b-1eea-4356-9460-0a644f0be4ee"),
+        UUID.fromString("a931017b-1eea-4356-9460-0a644f0be4ee")))
+
     @Test
     fun `IDs are properly serialized in WHERE clauses`() {
         assertEquals(
@@ -49,6 +66,13 @@ class DefaultSerializationTest {
     fun `Object serialization`() {
         assertEquals("""{"name":"Mike","age":46}""", dss.toDatabaseValue(mike.data))
     }
+
+    @Test
+    fun `Array serialization`() {
+        val data = dss.toDatabaseValue(dataWithArray.values, TestArrays::values.annotations)
+        assertEquals("""{"a931017b-1eea-4356-9460-0a644f0be4ee","a931017b-1eea-4356-9460-0a644f0be4ee"}""",data)
+    }
+
 
     @Test
     fun `enum serialization`() {
