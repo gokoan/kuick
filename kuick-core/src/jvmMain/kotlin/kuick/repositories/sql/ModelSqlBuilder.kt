@@ -89,12 +89,12 @@ class ModelSqlBuilder<T: Any>(
             setPairs.map { (p, v) -> "${p.name.toSnakeCase()} = ?" } +
             incPairs.map { (p, v) -> "${p.name.toSnakeCase()} = ${p.name.toSnakeCase()} + ?" }
 
-        val setValues = setPairs.map { prepareToSetCommand(it.value) } + incPairs.map { prepareToSetCommand(it.value) }
+        val setValues = setPairs.map { prepareToSetCommand(it.key.annotations, it.value) } + incPairs.map { prepareToSetCommand(it.key.annotations, it.value) }
 
         return PreparedSql("UPDATE $tableName SET ${setClause.csv()} WHERE ${toSql(where, this::toSlotValue)}", setValues + queryValues(where))
     }
 
-    private fun prepareToSetCommand(value: Any?) = if (value is Id) value.id else value
+    private fun prepareToSetCommand(annotations: List<Annotation>,value: Any?) = toDb(annotations, value)
 
     fun deleteSql(q: ModelQuery<T>) = "DELETE FROM $tableName WHERE ${toSql(q, this::toSqlValue)}"
 

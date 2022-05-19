@@ -10,6 +10,8 @@ import kuick.repositories.lt
 import kuick.repositories.lte
 import kuick.repositories.not
 import kuick.repositories.or
+import kuick.repositories.sql.annotations.AsArray
+import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -18,6 +20,13 @@ class ModelSqlBuilderTest {
     data class User(val name: String, val age: Int, val married: Boolean)
 
     val mq = ModelSqlBuilder(User::class, "user")
+
+    data class TestArrays(
+        val id: String,
+        @AsArray val values: List<UUID>,
+        val stringArray: List<String>)
+
+    val mq2 = ModelSqlBuilder(TestArrays::class, "data_array")
 
     @Test
     fun `eq, gt, gte, lt, lte operators`() {
@@ -60,6 +69,12 @@ class ModelSqlBuilderTest {
         assertEquals("INSERT INTO user (name, age, married) VALUES (?, ?, ?)", mq.insertSql)
         assertEquals("UPDATE user SET name = ?, age = ?, married = ? WHERE name = 'Mike'", mq.updateSql(User::name eq "Mike"))
         assertEquals("DELETE FROM user WHERE name = 'Mike'", mq.deleteSql(User::name eq "Mike"))
+    }
+
+    @Test
+    fun `update sql array`() {
+        val asd = mq2.preparedAtomicUpdateSql (  mapOf(TestArrays::values to listOf("0ca2d5f0-95c1-4995-8827-bb8fdc09fb71")), mapOf(),TestArrays::id eq "asd")
+        assertEquals("""{"0ca2d5f0-95c1-4995-8827-bb8fdc09fb71"}""" , asd.values.first())
     }
 
 
