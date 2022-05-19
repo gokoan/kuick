@@ -69,7 +69,7 @@ open class RepositoryJasync<T : Any>(
     ): List<P> {
         init()
         return mqb
-            .selectPreparedSql(where)
+            .selectPreparedSql(where, select)
             .execute()
             .toModelList(select)
     }
