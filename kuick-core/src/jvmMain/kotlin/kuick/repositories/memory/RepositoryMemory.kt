@@ -6,6 +6,8 @@ import java.util.Comparator
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
+import kotlin.reflect.full.instanceParameter
+import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.jvm.javaField
 
 
@@ -62,8 +64,22 @@ open class RepositoryMemory<T : Any>(
                 rows = rows.take(q.limit)
             }
         }
-        return rows
+        return rows.map { tryToClone(it) }
     }
+
+    private fun <T : Any> tryToClone (obj: T): T {
+        if (!obj::class.isData) {
+            println("cannot clone object, possible unpredictable errors if modifying it")
+            return obj
+        }
+
+        val copy = obj::class.memberFunctions.first { it.name == "copy" }
+        val instanceParam = copy.instanceParameter!!
+        return copy.callBy(mapOf(
+            instanceParam to obj
+        )) as T
+    }
+
 
     private val modelClassFieldByName = modelClass.declaredMemberProperties.map { Pair(it.name, it) }.toMap()
 
