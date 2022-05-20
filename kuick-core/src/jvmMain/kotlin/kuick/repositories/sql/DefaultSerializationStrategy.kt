@@ -88,7 +88,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         toDatabaseValueExtension(objValue) != null -> toDatabaseValueExtension(objValue)
 
         // Los tipos básicos se mapean al mismo tipo en BBDD
-        objValue == null || objValue is String || objValue is Boolean || objValue is Int ||
+        objValue == null || objValue is String  || objValue is Char || objValue is Boolean || objValue is Int ||
             objValue is Long || objValue is Float || objValue is Double || objValue is UUID
         -> objValue
 
