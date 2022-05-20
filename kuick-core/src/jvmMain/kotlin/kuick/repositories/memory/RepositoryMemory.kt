@@ -48,7 +48,7 @@ open class RepositoryMemory<T : Any>(
 
     override suspend fun findBy(q: ModelQuery<T>): List<T> {
         init()
-        return find(q)
+        return find(q).map { tryToClone(it) }
     }
 
     private fun find(q: ModelQuery<T>): List<T> {
@@ -64,7 +64,7 @@ open class RepositoryMemory<T : Any>(
                 rows = rows.take(q.limit)
             }
         }
-        return rows.map { tryToClone(it) }
+        return rows
     }
 
     private fun <T : Any> tryToClone (obj: T): T {
@@ -99,7 +99,7 @@ open class RepositoryMemory<T : Any>(
 
     override suspend fun getAll(): List<T> {
         init()
-        return table
+        return table.map { tryToClone(it) }
     }
 
     override suspend fun count(q: ModelQuery<T>): Int {
@@ -162,7 +162,7 @@ open class RepositoryMemory<T : Any>(
 
     override suspend fun update(set: Map<KProperty1<T, *>, Any?>, incr: Map<KProperty1<T, Number>, Number>, where: ModelQuery<T>): Int {
         init()
-        val toModify = findBy(where)
+        val toModify = find(where)
 
         fun KProperty1<T, Any?>.hardSet(e: T, v: Any?) {
             this.javaField?.isAccessible = true
