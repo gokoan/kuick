@@ -1,11 +1,14 @@
 package kuick.repositories
 
+import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
 interface ModelRepository<I : Any, T : Any> : Repository<T> {
 
     // Interface
     val idField: KProperty1<T, I>
+
+    val modelClass: KClass<T>
 
     // Default implementations
     suspend fun findById(i: I): T? = findOneBy(idField eq i)

@@ -27,7 +27,7 @@ class MemoryCache: Cache {
  * [ModelRepository]
  */
 open class CachedModelRepository<I : Any, T : Any>(
-    val modelClass: KClass<T>,
+    override val modelClass: KClass<T>,
     override val idField: KProperty1<T, I>,
     val repo: ModelRepository<I, T>,
     private val cache: Cache,
