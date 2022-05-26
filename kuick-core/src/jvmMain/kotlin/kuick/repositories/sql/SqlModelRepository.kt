@@ -7,7 +7,7 @@ import kotlin.reflect.KProperty1
 
 
 abstract class SqlModelRepository<I : Any, T : Any>(
-    val modelClass: KClass<T>,
+    override val modelClass: KClass<T>,
     val tableName: String,
     override val idField: KProperty1<T, I>,
     serializationStrategy: SerializationStrategy = DefaultSerializationStrategy()
