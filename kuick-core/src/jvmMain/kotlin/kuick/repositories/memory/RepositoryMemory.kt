@@ -165,8 +165,9 @@ open class RepositoryMemory<T : Any>(
         val toModify = find(where)
 
         fun KProperty1<T, Any?>.hardSet(e: T, v: Any?) {
-            this.javaField?.isAccessible = true
-            this.javaField?.set(e, v)
+            val javaField = this.javaField
+            javaField?.isAccessible = true
+            javaField?.set(e, v)
         }
 
         toModify.forEach { entity ->
