@@ -12,10 +12,14 @@ import kotlin.reflect.jvm.javaField
 
 
 open class RepositoryMemory<T : Any>(
-        val modelClass: KClass<T>
+        val modelClass: KClass<T>,
+        val efficientCloneFunction : ((T)->T)? = null
 ) : Repository<T> {
 
     val table = mutableListOf<T>()
+
+    val copy = modelClass.memberFunctions.first { it.name == "copy" }
+    val instanceParam = copy.instanceParameter!!
 
     private var initialized = false
 
@@ -52,29 +56,35 @@ open class RepositoryMemory<T : Any>(
     }
 
     private fun find(q: ModelQuery<T>): List<T> {
-        var rows = table.filter { it.match(q) }
         if (q is AttributedModelQuery) {
+            if (q.orderBy == null && q.limit == 1 && q.skip == 0L)
+                return table.firstOrNull { it.match(q) }?.let { listOf(it) }?: listOf()
+
+            var rows = table.filter { it.match(q) }
+
             q.orderBy?.let { orderBy ->
                 rows = rows.sortedWith(ModelComparator(orderBy.list))
             }
-            q.skip?.let {
+            if (q.skip>0) {
                 rows = rows.drop(q.skip.toInt())
             }
             q.limit?.let {
                 rows = rows.take(q.limit)
             }
+            return rows
         }
-        return rows
+        return  table.filter { it.match(q) }
     }
 
-    private fun <T : Any> tryToClone (obj: T): T {
+    private fun tryToClone (obj: T): T {
+
+        if (efficientCloneFunction!=null) return efficientCloneFunction.invoke(obj)
+
         if (!obj::class.isData) {
             println("cannot clone object, possible unpredictable errors if modifying it")
             return obj
         }
 
-        val copy = obj::class.memberFunctions.first { it.name == "copy" }
-        val instanceParam = copy.instanceParameter!!
         return copy.callBy(mapOf(
             instanceParam to obj
         )) as T
@@ -150,8 +160,8 @@ open class RepositoryMemory<T : Any>(
             }
         }
         is FilterExpNot<T> -> !match(q.exp)
-        is FilterExpAnd<T> -> this.match(q.left) and this.match(q.right)
-        is FilterExpOr<T> -> this.match(q.left) or this.match(q.right)
+        is FilterExpAnd<T> -> this.match(q.right) && this.match(q.left)
+        is FilterExpOr<T> -> this.match(q.left) || this.match(q.right)
         is DecoratedModelQuery<T> -> this.match(q.base)
 
         else -> throw NotImplementedError("Missing implementation of .match() for ${q}")
