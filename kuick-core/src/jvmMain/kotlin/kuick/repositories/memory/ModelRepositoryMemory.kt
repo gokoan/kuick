@@ -8,8 +8,9 @@ import kotlin.reflect.KProperty1
 
 open class ModelRepositoryMemory<I : Any, T : Any>(
         modelClass: KClass<T>,
-        override val idField: KProperty1<T, I>
-) : ModelRepository<I, T>, RepositoryMemory<T>(modelClass) {
+        override val idField: KProperty1<T, I>,
+        efficientCloneFunction : ((T)->T)? = null,
+) : ModelRepository<I, T>, RepositoryMemory<T>(modelClass, efficientCloneFunction) {
 
 
     override suspend fun update(t: T): T {
