@@ -2,6 +2,7 @@ package kuick.repositories.sql
 
 import kuick.models.Id
 import kuick.repositories.*
+import kuick.repositories.sql.annotations.AutoIncrementIndex
 import kuick.utils.nonStaticFields
 import java.lang.reflect.Field
 import kotlin.reflect.KClass
@@ -22,12 +23,19 @@ class ModelSqlBuilder<T: Any>(
     private val modelProperties = modelFields
         .map { field -> kClass.memberProperties.first { it.name == field.name } }
 
+    private val modelPropertiesForInsert = modelFields
+        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
+        .map { field -> kClass.memberProperties.first { it.name == field.name } }
+
     val modelColumns = modelFields.map { it.name.toSnakeCase() }
 
     protected val selectColumns = modelColumns.csv()
 
-    protected val insertColumns = selectColumns
-    protected val insertValueSlots = modelColumns.map { "?" }.csv()
+    protected val insertColumns = modelFields
+        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
+        .map { it.name.toSnakeCase() }
+
+    protected val insertValueSlots = insertColumns.map { "?" }.csv()
 
     protected val updateColumns = modelColumns.map { "$it = ?" }.csv()
 
@@ -62,10 +70,10 @@ class ModelSqlBuilder<T: Any>(
 
     val insertSql = "INSERT INTO $tableName ($insertColumns) VALUES ($insertValueSlots)"
     fun insertPreparedSql(t: T): PreparedSql =
-        PreparedSql(insertSql, valuesOf(t))
+        PreparedSql(insertSql, valuesOfForInsert(t))
 
     fun insertManySql(ts: Collection<T>): String =
-        "INSERT INTO $tableName ($insertColumns) VALUES ${ts.map { "(${valuesOf(it).map { toSqlValue(it) }.csv()})" }.csv()}"
+        "INSERT INTO $tableName ($insertColumns) VALUES ${ts.map { "(${valuesOfForInsert(it).map { toSqlValue(it) }.csv()})" }.csv()}"
 
     fun updateSql(q: ModelQuery<T>) = "UPDATE $tableName SET $updateColumns WHERE ${toSql(q, this::toSqlValue)}"
 
@@ -162,8 +170,11 @@ class ModelSqlBuilder<T: Any>(
     }
 
 
-    fun valuesOf(t: T): List<Any?> = modelProperties.map { prop -> toDb(prop.annotations, prop.get(t)) }
+    fun valuesOf(t: T): List<Any?> = modelProperties
+        .map { prop -> toDb(prop.annotations, prop.get(t)) }
 
+    fun valuesOfForInsert(t: T): List<Any?> = modelPropertiesForInsert
+        .map { prop -> toDb(prop.annotations, prop.get(t)) }
 
     fun <T: Any> queryValues(q: ModelQuery<T>): List<Any?> = when (q) {
         is FieldIsNull<T, *> -> emptyList()

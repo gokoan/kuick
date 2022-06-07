@@ -8,6 +8,7 @@ import kuick.models.Email
 import kuick.models.Id
 import kuick.models.KLocalDate
 import kuick.repositories.sql.annotations.AsArray
+import kuick.repositories.sql.annotations.AsNumericId
 import java.lang.reflect.Type
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -98,7 +99,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         objValue is org.joda.time.LocalDate -> objValue
 
         // Los IDs de kuick se mapean a String
-        objValue is Id -> objValue.id
+        objValue is Id -> if (annotations.any { it is AsNumericId }) objValue.id.toLong() else objValue.id
 
         // Los emails de kuick se mapean a String
         objValue is Email -> objValue.email
@@ -112,7 +113,9 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         objValue.javaClass.isEnum -> (objValue as Enum<*>).name
 
 
-        objValue is List<*> &&  annotations.any { it is AsArray } -> dbJson.toJson(objValue)
+        objValue is List<*> &&  annotations.any { it is AsArray } ->
+            dbJson.toJson(objValue)
+                .let { if (annotations.any { it is AsNumericId }) it.filterNot { it == '\'' } else it  }
             .replace('[','{')
             .replace(']','}')
 
