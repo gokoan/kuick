@@ -48,7 +48,9 @@ open class RepositoryMemory<T : Any>(
                 autoIncrementIndexes[it.key] = idxValue + 1
             }
             table.add(newItem)
+            return newItem
         }
+        table.add(t)
         return t
     }
 
