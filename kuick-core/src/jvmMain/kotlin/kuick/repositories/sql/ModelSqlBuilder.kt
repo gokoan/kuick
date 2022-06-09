@@ -33,9 +33,11 @@ class ModelSqlBuilder<T: Any>(
 
     protected val insertColumns = modelFields
         .filterNot { it.annotations.any { it is AutoIncrementIndex } }
-        .map { it.name.toSnakeCase() }
+        .map { it.name.toSnakeCase() }.csv()
 
-    protected val insertValueSlots = insertColumns.map { "?" }.csv()
+    protected val insertValueSlots = modelFields
+        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
+        .map { it.name.toSnakeCase() }.map { "?" }.csv()
 
     protected val updateColumns = modelColumns.map { "$it = ?" }.csv()
 
