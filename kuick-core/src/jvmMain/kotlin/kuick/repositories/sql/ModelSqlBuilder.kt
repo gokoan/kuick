@@ -20,25 +20,23 @@ class ModelSqlBuilder<T: Any>(
 
     private val modelFields: List<Field> = kClass.java.nonStaticFields()
 
+    private val insertModelFields = modelFields
+        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
+
     private val modelProperties = modelFields
         .map { field -> kClass.memberProperties.first { it.name == field.name } }
 
-    private val modelPropertiesForInsert = modelFields
-        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
+    private val modelPropertiesForInsert = insertModelFields
         .map { field -> kClass.memberProperties.first { it.name == field.name } }
 
     val modelColumns = modelFields.map { it.name.toSnakeCase() }
 
     protected val selectColumns = modelColumns.csv()
 
-    protected val insertColumns = modelFields
-        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
-        .map { it.name.toSnakeCase() }.csv()
+    protected val insertColumns = insertModelFields.map { it.name.toSnakeCase() }.csv()
 
-    protected val insertValueSlots = modelFields
-        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
-        .map { it.name.toSnakeCase() }.map { "?" }.csv()
-
+    protected val insertValueSlots = insertModelFields.map { it.name.toSnakeCase() }.map { "?" }.csv()
+    
     protected val updateColumns = modelColumns.map { "$it = ?" }.csv()
 
     protected val selectBase = "SELECT $selectColumns FROM $tableName"

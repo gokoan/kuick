@@ -111,8 +111,8 @@ subprojects {
     }
 
     if (mustPublish) {
-        def publishUser = "Nestorferrando"
-        def publishPassword = "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"
+        def publishUser = System.getenv("GH_USERNAME") ?: project.findProperty("GH_USERNAME")?.toString()
+        def publishPassword = System.getenv("GH_TOKEN") ?: project.findProperty("GH_TOKEN")?.toString()
         //println("Maven publish: ${publishUser} / ${publishPassword}")
 
         publishing {
