@@ -12,20 +12,28 @@ class ModelSqlBuilder_autoincrement_Test {
 
     data class UserId(override val id: String) : Id
 
-    data class User( @AutoIncrementIndex val userId: UserId, val name: String, val age: Int)
+    data class User( @AsNumericId @AutoIncrementIndex val userId: UserId, val name: String, val age: Int)
 
     val mq = ModelSqlBuilder(User::class, "data_array")
 
     @Test
-    fun `correct autoincrement index sql build`() = runBlocking {
+    fun `correct autoincrement index sql build for insert`() = runBlocking {
 
         assertEquals(
             ModelSqlBuilder.PreparedSql("INSERT INTO data_array (name, age) VALUES (?, ?)",
                 listOf("Mike", 46)),
             mq.insertPreparedSql(User( UserId("-1"),"Mike", 46)))
 
+    }
 
+    @Test
+    fun `correct autoincrement index sql build for insertMany`() = runBlocking {
+
+        assertEquals(
+            "INSERT INTO data_array (name, age) VALUES ('Mike', 46)",
+            mq.insertManySql(listOf( User( UserId("-1"),"Mike", 46))))
 
     }
+
 
 }

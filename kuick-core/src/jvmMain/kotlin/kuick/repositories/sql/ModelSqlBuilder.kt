@@ -7,6 +7,7 @@ import kuick.utils.nonStaticFields
 import java.lang.reflect.Field
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.memberProperties
 
 class ModelSqlBuilder<T: Any>(
@@ -21,7 +22,8 @@ class ModelSqlBuilder<T: Any>(
     private val modelFields: List<Field> = kClass.java.nonStaticFields()
 
     private val insertModelFields = modelFields
-        .filterNot { it.annotations.any { it is AutoIncrementIndex } }
+        .filterNot { field -> kClass.declaredMemberProperties.first { it.name == field.name }
+            .annotations.any { it is AutoIncrementIndex } }
 
     private val modelProperties = modelFields
         .map { field -> kClass.memberProperties.first { it.name == field.name } }
