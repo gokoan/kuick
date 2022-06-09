@@ -1,7 +1,9 @@
 package kuick.repositories.memory
 
 
+import kuick.models.Id
 import kuick.repositories.*
+import kuick.repositories.sql.annotations.AutoIncrementIndex
 import java.util.Comparator
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -21,15 +23,33 @@ open class RepositoryMemory<T : Any>(
     val copy = modelClass.memberFunctions.first { it.name == "copy" }
     val instanceParam = copy.instanceParameter!!
 
+    val autoIncrementIndexes = HashMap<KProperty1<T, *>,Int>()
+
     private var initialized = false
 
     override suspend fun init() {
         if (initialized) return
         initialized = true
+        modelClass.declaredMemberProperties.filter { it.annotations.any{it is AutoIncrementIndex }}
+            .forEach { autoIncrementIndexes[it] = 0  }
+
     }
 
     override suspend fun insert(t: T): T {
         init()
+        if (autoIncrementIndexes.isNotEmpty()) {
+            val newItem = tryToClone(t)
+            autoIncrementIndexes.entries.toList().forEach {
+               val idxValue = it.value
+                val valueToSet =
+                    if  (it.key.get(t) is Id) it.key.get(t)!!::class.constructors.first().call(idxValue.toString())
+                    else idxValue
+                it.key.hardSet(newItem,valueToSet)
+                autoIncrementIndexes[it.key] = idxValue + 1
+            }
+            table.add(newItem)
+            return newItem
+        }
         table.add(t)
         return t
     }
@@ -170,15 +190,18 @@ open class RepositoryMemory<T : Any>(
     private fun T.compare(q: SimpleFieldBinop<T, *>) =
             (q.field.get(this) as Comparable<Any>?)?.compareTo(q.value as Comparable<Any>)
 
+
+    private fun KProperty1<T, Any?>.hardSet(e: T, v: Any?) {
+        val javaField = this.javaField
+        javaField?.isAccessible = true
+        javaField?.set(e, v)
+    }
+
+
     override suspend fun update(set: Map<KProperty1<T, *>, Any?>, incr: Map<KProperty1<T, Number>, Number>, where: ModelQuery<T>): Int {
         init()
         val toModify = find(where)
 
-        fun KProperty1<T, Any?>.hardSet(e: T, v: Any?) {
-            val javaField = this.javaField
-            javaField?.isAccessible = true
-            javaField?.set(e, v)
-        }
 
         toModify.forEach { entity ->
             set.forEach { (k, v) -> k.hardSet(entity, v)}
