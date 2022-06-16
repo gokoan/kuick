@@ -17,12 +17,8 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.reflect.KClass
-import kotlin.reflect.KType
-import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubclassOf
-import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
-import kotlin.reflect.jvm.javaType
 
 open class DefaultSerializationStrategy: SerializationStrategy {
 
@@ -30,8 +26,8 @@ open class DefaultSerializationStrategy: SerializationStrategy {
     private val LOCAL_DATE_TIME_FMT = DateTimeFormatter.ISO_DATE_TIME
 
 
-    override fun fromDatabaseValue(kType: KType, dbValue: Any?): Any? {
-        val targetClass: KClass<*> = kType.classifier as KClass<*>
+    override fun fromDatabaseValue(parameterData: ParameterReflectInfo, dbValue: Any?): Any? {
+        val targetClass = parameterData.clazz
         val out = when {
             dbValue == null -> null
 
@@ -48,7 +44,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             targetClass == List::class && dbValue is List<*> -> dbValue
 
             // Los IDs
-            targetClass.isSubclassOf(Id::class) ->
+            parameterData.isSubclassOfId ->
                 targetClass.primaryConstructor?.call(dbValue.toString()) as? Id?
 
             // Los Emails
@@ -74,7 +70,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             }
 
             // Las clases complejas se almaenan como JSON
-            else -> dbJson.fromJson(dbValue.toString(), kType.javaType)
+            else -> dbJson.fromJson(dbValue.toString(), parameterData.type)
         }
         return out
     }

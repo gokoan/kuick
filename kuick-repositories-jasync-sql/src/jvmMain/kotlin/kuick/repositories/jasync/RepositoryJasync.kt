@@ -5,11 +5,10 @@ import kuick.repositories.GroupBy
 import kuick.repositories.ModelQuery
 import kuick.repositories.OrderByDescriptor
 import kuick.repositories.Repository
-import kuick.repositories.sql.DefaultSerializationStrategy
-import kuick.repositories.sql.ModelSqlBuilder
-import kuick.repositories.sql.SerializationStrategy
+import kuick.repositories.sql.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
+import kotlin.reflect.jvm.javaType
 
 open class RepositoryJasync<T : Any>(
     val modelClass: KClass<T>,
@@ -20,6 +19,9 @@ open class RepositoryJasync<T : Any>(
 
     private val mqb = ModelSqlBuilder(modelClass, tableName, serializationStrategy)
     private var initialized = false
+
+    private val reflectinfo : Map<String, ParameterReflectInfo> = modelClass.constructors.first().parameters
+        .associate { it.name!! to it.type.toReflectInfo() }
 
     override suspend fun init() {
         if (initialized) return
@@ -74,8 +76,13 @@ open class RepositoryJasync<T : Any>(
             .toModelList(select)
     }
 
-    private fun <P: Any> QueryResult.toModelList(toClass: KClass<P>): List<P> = rows.map { row ->
-        mqb.serializationStrategy.modelFromValues(toClass, (0 until row.size).map { i -> row[i] })
+    private fun <P: Any> QueryResult.toModelList(toClass: KClass<P>): List<P> {
+        val constructor = toClass.constructors.first()
+        val parameters = constructor.parameters.map { reflectinfo[it.name]!! }
+        val reflectionInfo = ModelReflectionInfo(constructor, parameters)
+        return rows.map { row ->
+            mqb.serializationStrategy.modelFromValues(reflectionInfo, (0 until row.size).map { i -> row[i] })
+        }
     }
 
     override suspend fun getAll(): List<T> {

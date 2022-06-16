@@ -84,10 +84,10 @@ class DefaultSerializationTest {
 
     @Test
     fun `enum de-serialization`() {
-        assertEquals(TestEnum.THREE, dss.fromDatabaseValue(TestEnum::class.starProjectedType ,"THREE" ))
-        assertEquals(TestEnum.THREE, dss.fromDatabaseValue(TestEnum::class.starProjectedType ,"\"THREE\"" ))
-        assertNull(dss.fromDatabaseValue(TestEnum::class.starProjectedType ,"\"FOUR\""))
-        assertNull(dss.fromDatabaseValue(TestEnum::class.starProjectedType ,"FOUR"))
+        assertEquals(TestEnum.THREE, dss.fromDatabaseValue(TestEnum::class.starProjectedType.toReflectInfo() ,"THREE" ))
+        assertEquals(TestEnum.THREE, dss.fromDatabaseValue(TestEnum::class.starProjectedType.toReflectInfo() ,"\"THREE\"" ))
+        assertNull(dss.fromDatabaseValue(TestEnum::class.starProjectedType.toReflectInfo() ,"\"FOUR\""))
+        assertNull(dss.fromDatabaseValue(TestEnum::class.starProjectedType.toReflectInfo() ,"FOUR"))
     }
 
 }
