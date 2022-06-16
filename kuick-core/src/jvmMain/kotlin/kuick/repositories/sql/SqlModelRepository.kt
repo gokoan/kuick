@@ -1,10 +1,24 @@
 package kuick.repositories.sql
 
+import kuick.models.Id
 import kuick.repositories.*
-import kotlin.reflect.KClass
-import kotlin.reflect.KProperty1
+import java.lang.reflect.Type
+import kotlin.reflect.*
+import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.jvm.*
+
+data class ParameterReflectInfo(val name: String, val type: Type, val clazz: KClass<*>, val isSubclassOfId: Boolean)
+data class  ModelReflectionInfo<T>(val constructor: KFunction<T>, val constructorArgs: List<ParameterReflectInfo>)
+
+fun KParameter.toReflectInfo() = ParameterReflectInfo(name!!, type.javaType, type.classifier as KClass<*>, (type.classifier as KClass<*>).isSubclassOf(Id::class))
+fun KType.toReflectInfo() = ParameterReflectInfo(this.toString(), javaType, classifier as KClass<*>, (classifier as KClass<*>).isSubclassOf(Id::class))
 
 
+fun <T : Any> KClass<T>.toModelReflectInfo(): ModelReflectionInfo<T> {
+    val constructor = this.constructors.first()
+    val parameters = constructor.parameters.map {it.toReflectInfo()}
+    return ModelReflectionInfo(constructor, parameters)
+}
 
 abstract class SqlModelRepository<I : Any, T : Any>(
     override val modelClass: KClass<T>,
@@ -15,6 +29,10 @@ abstract class SqlModelRepository<I : Any, T : Any>(
 
     private val mqb = ModelSqlBuilder(modelClass, tableName, serializationStrategy)
     private var initialized = false
+
+
+    private val reflectinfo : Map<String,ParameterReflectInfo> = modelClass.constructors.first().parameters
+        .associate { it.name!! to it.toReflectInfo() }
 
     override suspend fun init() {
         if (initialized) return
@@ -125,10 +143,15 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         return prepQuery(sql, values)
     }
 
-    private fun <P: Any> SqlQueryResults.toModelList(toClass: KClass<P>): List<P> =
-        rows.map { row ->
-            mqb.serializationStrategy.modelFromValues(toClass, (0 until row.size).map { i -> row[i] })
+
+    private fun <P : Any> SqlQueryResults.toModelList(toClass: KClass<P>): List<P> {
+        val constructor = toClass.constructors.first()
+        val parameters = constructor.parameters.map { reflectinfo[it.name]!! }
+        val reflectionInfo = ModelReflectionInfo(constructor, parameters)
+        return rows.map { row ->
+            mqb.serializationStrategy.modelFromValues(reflectionInfo, (0 until row.size).map { i -> row[i] })
         }
+    }
 
     //--------------------
 

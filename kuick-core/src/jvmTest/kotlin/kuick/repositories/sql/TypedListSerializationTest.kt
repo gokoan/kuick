@@ -26,7 +26,7 @@ class TypedListSerializationTest {
     // ESTE TEST FALLA Y ES JUSTO LO QUE HAY QUE ARREGLAR!!!
     @Test
     fun `Typed List deserialization`() {
-        assertEquals(q, dss.modelFromValues(Question::class, listOf(q.questionId, Json.toJson(q.answers))))
+        assertEquals(q, dss.modelFromValues(Question::class.toModelReflectInfo(), listOf(q.questionId, Json.toJson(q.answers))))
     }
 
 }
