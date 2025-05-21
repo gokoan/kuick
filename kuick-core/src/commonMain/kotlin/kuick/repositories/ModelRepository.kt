@@ -21,9 +21,7 @@ interface ModelRepository<I : Any, T : Any> : Repository<T> {
     suspend fun update(t: T): T = updateBy(t, idField eq idField.get(t))
     suspend fun upsert(t: T): T
     suspend fun updateMany(collection: Collection<T>) = collection.forEach { update(it) }
-    suspend fun updateManyBy(collection: Collection<T>, comparator: (T) -> (ModelQuery<T>)): Unit {
-        throw NotImplementedError()
-    }
+    suspend fun updateManyBy(collection: Collection<T>, comparator: (T) -> (ModelQuery<T>)): Unit
 }
 
 suspend fun <I : Any, T : Any> ModelRepository<I, T>.updateBy(q: ModelQuery<T>, updater: (T) -> T) {

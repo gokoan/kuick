@@ -19,9 +19,11 @@ import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.primaryConstructor
+import kuick.logging.Logger // Added import
 
 open class DefaultSerializationStrategy: SerializationStrategy {
 
+    private val logger = Logger(DefaultSerializationStrategy::class.simpleName ?: "DefaultSerializationStrategy") // Added logger
     private val LOCAL_DATE_FMT = DateTimeFormatter.ISO_DATE
     private val LOCAL_DATE_TIME_FMT = DateTimeFormatter.ISO_DATE_TIME
 
@@ -70,7 +72,15 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             }
 
             // Las clases complejas se almaenan como JSON
-            else -> dbJson.fromJson(dbValue.toString(), parameterData.type)
+            else -> try {
+                dbJson.fromJson(dbValue.toString(), parameterData.type)
+            } catch (e: JsonSyntaxException) {
+                logger.error(e) { "Error deserializing JSON to ${parameterData.type} from value: $dbValue" }
+                null // Or rethrow, or handle as per desired error strategy
+            } catch (e: Exception) {
+                logger.error(e) { "Generic error deserializing to ${parameterData.type} from value: $dbValue" }
+                null // Or rethrow
+            }
         }
         return out
     }
@@ -109,11 +119,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         objValue.javaClass.isEnum -> (objValue as Enum<*>).name
 
 
-        objValue is List<*> &&  annotations.any { it is AsArray } ->
-            dbJson.toJson(objValue)
-                .let { if (annotations.any { it is AsNumericId }) it.filterNot { it == '\'' } else it  }
-            .replace('[','{')
-            .replace(']','}')
+        objValue is List<*> && annotations.any { it is AsArray } -> objValue
 
         // El resto lo mapeamos a JSON
         else -> dbJson.toJson(objValue)
@@ -127,26 +133,36 @@ open class DefaultSerializationStrategy: SerializationStrategy {
         .create()
 
     class IdGsonAdapter : JsonDeserializer<Id>, JsonSerializer<Id> {
+        // Logger for IdGsonAdapter, can use the outer class's logger if preferred and made accessible
+        private val adapterLogger = Logger(IdGsonAdapter::class.simpleName ?: "IdGsonAdapter")
 
         override fun deserialize(je: JsonElement, type: Type, ctx: JsonDeserializationContext): Id {
-            val constuctor = (type as Class<*>).declaredConstructors.first { it.parameterCount == 1 }
-                ?: error("Can't find a constructor with one argument for $type")
-            val idString = when {
-                je is JsonObject && je.has(Id::id.name) -> je.get(Id::id.name).asString
-                je is JsonObject -> {
-                    var idValue: String? = null
-                    for (key in je.keySet()) {
-                        // This handle mangling issues. Eg. "id_ursnrc$_0"
-                        if (key.startsWith("id")) {
-                            idValue = je.get(key).asString
-                            break
-                        }
+            try {
+                val constuctor = (type as Class<*>).declaredConstructors.first { it.parameterCount == 1 }
+                    ?: run {
+                        adapterLogger.error { "Can't find a constructor with one argument for $type" }
+                        throw IllegalStateException("Can't find a constructor with one argument for $type")
                     }
-                    idValue
+                val idString = when {
+                    je is JsonObject && je.has(Id::id.name) -> je.get(Id::id.name).asString
+                    je is JsonObject -> {
+                        var idValue: String? = null
+                        for (key in je.keySet()) {
+                            // This handle mangling issues. Eg. "id_ursnrc$_0"
+                            if (key.startsWith("id")) {
+                                idValue = je.get(key).asString
+                                break
+                            }
+                        }
+                        idValue
+                    }
+                    else -> je.asString
                 }
-                else -> je.asString
+                return constuctor.newInstance(idString) as Id
+            } catch (e: Exception) {
+                adapterLogger.error(e) { "Error deserializing Id of type $type from JsonElement: $je" }
+                throw e // Re-throw to maintain previous behavior, or handle differently
             }
-            return constuctor.newInstance(idString) as Id
         }
 
         override fun serialize(id: Id?, type: Type, ctx: JsonSerializationContext): JsonElement {

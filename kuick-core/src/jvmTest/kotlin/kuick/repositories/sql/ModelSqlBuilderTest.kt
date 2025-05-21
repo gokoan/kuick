@@ -122,4 +122,56 @@ class ModelSqlBuilderTest {
         )
     }
 
+    // Added for testing upsertPreparedSqlPostgres
+    data class TestUserUpsert(val id: String, val name: String, val email: String?)
+
+    // Helper to convert camelCase to snake_case, assuming it's not globally available for tests
+    // or to ensure consistency with the one in SqlModelRepository if it's private.
+    private fun String.toSnakeCaseForTest(): String = flatMap {
+        if (it.isUpperCase()) listOf('_', it.toLowerCase()) else listOf(it)
+    }.joinToString("")
+
+    @Test
+    fun `prepared upsert postgres`() {
+        val idField = TestUserUpsert::id
+        val idColumnName = idField.name.toSnakeCaseForTest() // "id"
+        val mqbUpsert = ModelSqlBuilder(TestUserUpsert::class, "test_users", idColumnName)
+
+        val testUser = TestUserUpsert("user1", "Mike D.", "mike@example.com")
+
+        // Calling the method under test
+        val preparedSql = mqbUpsert.upsertPreparedSqlPostgres(testUser, TestUserUpsert::id)
+
+        // Assert the SQL string
+        // Based on ModelSqlBuilder logic:
+        // - insertColumns will be "id, name, email" (assuming id is not AutoIncrementIndex)
+        // - insertValueSlots will be "?, ?, ?"
+        // - conflictColumn will be "id" (from idProperty.name.toSnakeCaseForTest())
+        // - updateSetClauses will be "name = EXCLUDED.name, email = EXCLUDED.email"
+        //   (because insertModelFields for TestUserUpsert should be id, name, email,
+        //    and then it maps these to "col = EXCLUDED.col", but the idProperty itself is usually excluded from the SET part,
+        //    the current upsertPreparedSqlPostgres implementation in ModelSqlBuilder includes all insertModelFields in the SET clause
+        //    which means 'id = EXCLUDED.id' might be there if 'id' is in insertModelFields.
+        //    Let's re-verify ModelSqlBuilder.upsertPreparedSqlPostgres:
+        //    `updateSetClauses = insertModelFields.map { f -> val colName = f.name.toSnakeCase(); "$colName = EXCLUDED.$colName" }.csv()`
+        //    If 'id' is in insertModelFields, then "id = EXCLUDED.id" will be part of the SET.
+        //    `insertModelFields` filters out AutoIncrementIndex. Assuming `TestUserUpsert.id` is not auto-increment.
+        //    So, id, name, email are in insertModelFields.
+        //    Thus, updateSetClauses should be "id = EXCLUDED.id, name = EXCLUDED.name, email = EXCLUDED.email"
+
+        val expectedSql = """
+            INSERT INTO test_users (id, name, email)
+            VALUES (?, ?, ?)
+            ON CONFLICT (id) DO UPDATE SET id = EXCLUDED.id, name = EXCLUDED.name, email = EXCLUDED.email
+            RETURNING id
+        """.trimIndent()
+        assertEquals(expectedSql, preparedSql.sql)
+
+        // Assert the list of values
+        // valuesOfForInsert(t) is used, which maps modelPropertiesForInsert.
+        // modelPropertiesForInsert are derived from insertModelFields.
+        // So, it should be [testUser.id, testUser.name, testUser.email]
+        val expectedValues = listOf(testUser.id, testUser.name, testUser.email)
+        assertEquals(expectedValues, preparedSql.values)
+    }
 }

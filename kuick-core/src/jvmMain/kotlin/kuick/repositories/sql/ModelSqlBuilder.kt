@@ -13,6 +13,7 @@ import kotlin.reflect.full.memberProperties
 class ModelSqlBuilder<T: Any>(
     val kClass: KClass<T>,
     _tableName: String,
+    private val idColumnName: String, // Added idColumnName parameter
     val serializationStrategy: SerializationStrategy = DefaultSerializationStrategy()
 ) {
     private val tableName = if (_tableName != _tableName.toLowerCase()) """public."$_tableName"""" else _tableName
@@ -70,9 +71,9 @@ class ModelSqlBuilder<T: Any>(
         return base.copy("${base.sql} ${extraSql.joinToString(" ")}".trim(), base.values)
     }
 
-    val insertSql = "INSERT INTO $tableName ($insertColumns) VALUES ($insertValueSlots)"
+    val insertSql = "INSERT INTO $tableName ($insertColumns) VALUES ($insertValueSlots) RETURNING $idColumnName" // Used idColumnName
     fun insertPreparedSql(t: T): PreparedSql =
-        PreparedSql(insertSql, valuesOfForInsert(t))
+        PreparedSql(insertSql, valuesOfForInsert(t)) // insertSql already has RETURNING clause
 
     fun insertManySql(ts: Collection<T>): String =
         "INSERT INTO $tableName ($insertColumns) VALUES ${ts.map { "(${valuesOfForInsert(it).map { toSqlValue(it) }.csv()})" }.csv()}"
@@ -82,13 +83,23 @@ class ModelSqlBuilder<T: Any>(
     fun updatePreparedSql(t: T, q: ModelQuery<T>): PreparedSql =
         PreparedSql("UPDATE $tableName SET $updateColumns WHERE ${toSql(q, this::toSlotValue)}", valuesOf(t) + queryValues(q))
 
+    // Removed updateManyPreparedSql method
 
-    fun updateManyPreparedSql(ts: Collection<Pair<T, ModelQuery<T>>>): String =
-        ts.map { (t, q) ->
-            "UPDATE $tableName " +
-                "SET ${modelColumns.mapIndexed { index, s -> "$s = ${toSqlValue(valuesOf(t)[index])}" }.csv()} " +
-                "WHERE ${toSql(q, this::toSqlValue)};"
-        }.joinToString (separator = " ")
+    fun upsertPreparedSqlPostgres(t: T, idProperty: KProperty1<T, *>): PreparedSql {
+        val conflictColumn = idProperty.name.toSnakeCase()
+        val updateSetClauses = insertModelFields
+            .map { f -> val colName = f.name.toSnakeCase(); "$colName = EXCLUDED.$colName" }
+            .csv()
+
+        val sql = """
+            INSERT INTO $tableName ($insertColumns)
+            VALUES ($insertValueSlots)
+            ON CONFLICT ($conflictColumn) DO UPDATE SET $updateSetClauses
+            RETURNING ${this.idColumnName}
+        """.trimIndent()
+
+        return PreparedSql(sql, valuesOfForInsert(t))
+    }
 
     fun preparedAtomicUpdateSql(set: Map<KProperty1<T, *>, Any?>, incr: Map<KProperty1<T, Number>, Number>, where: ModelQuery<T>): PreparedSql {
         // Necesitamos listas para fijar un orden conocido
