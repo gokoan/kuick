@@ -7,6 +7,7 @@ import kotlin.reflect.*
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.jvm.*
 import kuick.logging.Logger // Added import
+import com.github.jasync.sql.db.SuspendingConnection // Added import
 
 data class ParameterReflectInfo(val name: String, val type: Type, val clazz: KClass<*>, val isSubclassOfId: Boolean)
 data class  ModelReflectionInfo<T>(val constructor: KFunction<T>, val constructorArgs: List<ParameterReflectInfo>)
@@ -42,22 +43,26 @@ abstract class SqlModelRepository<I : Any, T : Any>(
     private val reflectinfo : Map<String,ParameterReflectInfo> = modelClass.constructors.first().parameters
         .associate { it.name!! to it.toReflectInfo() }
 
-    // Modified init signature
-    override suspend fun init(connection: com.github.jasync.sql.db.SuspendingConnection?) {
+    // Step 1.a: Rename init to initialize
+    protected suspend fun initialize(connection: SuspendingConnection?) { // Replaced FQN
         if (initialized) return
         initialized = true
-        checkTableSchema(connection) // Pass connection to checkTableSchema
+        checkTableSchema(connection)
     }
 
-    // Modified checkTableSchema to accept and use connection
-    private suspend fun checkTableSchema(connection: com.github.jasync.sql.db.SuspendingConnection? = null) {
+    // Step 1.b: Add override for init
+    override suspend fun init() {
+        initialize(null) // Default non-transactional initialization
+    }
+
+    private suspend fun checkTableSchema(connection: SuspendingConnection? = null) { // Replaced FQN
         query(mqb.checkTableSchema(), connection)
     }
 
-    // Step 1: Modified insert signature and logic (already done in previous turn)
-    override suspend fun insert(t: T, connection: com.github.jasync.sql.db.SuspendingConnection?): T {
-        init(connection) // Pass connection
-        val results = mqb.insertPreparedSql(t).execute(connection) // Pass connection
+    // Step 2.a: Rename insert to insertTransactional
+    protected suspend fun insertTransactional(t: T, connection: SuspendingConnection?): T { // Replaced FQN
+        initialize(connection) // Step 1.c: Update call to initialize
+        val results = mqb.insertPreparedSql(t).execute(connection)
         val returnedRawId = results.rows.firstOrNull()?.get(0)
 
         if (returnedRawId != null) {
@@ -76,7 +81,7 @@ abstract class SqlModelRepository<I : Any, T : Any>(
                         when {
                             param.name == idField.name -> newIdValue
                             param.kind == KParameter.Kind.INSTANCE -> t
-                            else -> modelClass.memberProperties.find { it.name == param.name }?.get(t)
+                            else -> modelClass.memberProperties.find { property -> property.name == param.name }?.get(t)
                         }
                     }
                     // Filter out optional parameters that are not provided if their value is null
@@ -103,39 +108,44 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         private const val CHUNK_SIZE = 100 // Defined CHUNK_SIZE
     }
 
+    // Step 2.b: Add override for insert
+    override suspend fun insert(t: T): T {
+        return insertTransactional(t, null) // Default non-transactional insert
+    }
+
     override suspend fun insertMany(ts: Collection<T>): Int {
-        return executeInTransaction { transactionalConn -> // Wrapped in executeInTransaction
-            init(transactionalConn) // Pass the connection
+        return executeInTransaction { transactionalConn ->
+            initialize(transactionalConn) // Step 1.c: Update call to initialize
             if (ts.isEmpty()) return@executeInTransaction 0
             var totalRowsAffected = 0
             ts.chunked(CHUNK_SIZE).forEach { chunk ->
                 if (chunk.isNotEmpty()) {
                     val sqlForChunk = mqb.insertManySql(chunk)
-                    totalRowsAffected += this.query(sqlForChunk, transactionalConn).rowsAffected.toInt() // Pass connection
+                    totalRowsAffected += this.query(sqlForChunk, transactionalConn).rowsAffected.toInt()
                 }
             }
             totalRowsAffected
         }
     }
 
-    // Step 2: Refactor insertManyAndRetrieve
     suspend fun insertManyAndRetrieve(ts: Collection<T>): List<T> {
         return executeInTransaction { transactionalConn ->
-            init(transactionalConn) // Call init with transactionalConn
+            initialize(transactionalConn) // Step 1.c: Update call to initialize
             if (ts.isEmpty()) return@executeInTransaction emptyList()
             val resultList = mutableListOf<T>()
             for (t in ts) {
-                resultList.add(insert(t, transactionalConn)) // Call insert with transactionalConn
+                // Step 2.c: Update internal call to insertTransactional
+                resultList.add(insertTransactional(t, transactionalConn))
             }
             resultList
         }
     }
 
-    // Step 1: Modified upsert signature and logic (already done in previous turn)
-    override suspend fun upsert(t: T, connection: com.github.jasync.sql.db.SuspendingConnection?): T { // Already updated
-        init(connection) // Pass connection
+    // Step 3.a: Rename upsert to upsertTransactional
+    protected suspend fun upsertTransactional(t: T, connection: SuspendingConnection?): T { // Replaced FQN
+        initialize(connection) // Step 1.c: Update call to initialize
         val preparedSql = mqb.upsertPreparedSqlPostgres(t, idField)
-        val results = this.prepQuery(preparedSql.sql, preparedSql.values, connection) // Pass connection
+        val results = this.prepQuery(preparedSql.sql, preparedSql.values, connection)
         val returnedRawId = results.rows.firstOrNull()?.get(0)
 
         if (returnedRawId != null) {
@@ -154,7 +164,7 @@ abstract class SqlModelRepository<I : Any, T : Any>(
                         when {
                             param.name == idField.name -> newIdValue
                             param.kind == KParameter.Kind.INSTANCE -> t
-                            else -> modelClass.memberProperties.find { it.name == param.name }?.get(t)
+                            else -> modelClass.memberProperties.find { property -> property.name == param.name }?.get(t)
                         }
                     }
                     val finalParams = params.filter { (param, value) -> value != null || param.isOptional || param.type.isMarkedNullable }
@@ -175,9 +185,14 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         return t
     }
 
+    // Step 3.b: Add override for upsert
+    override suspend fun upsert(t: T): T {
+        return upsertTransactional(t, null) // Default non-transactional upsert
+    }
+
     override suspend fun updateBy(t: T, q: ModelQuery<T>): T {
-        init(null) // Pass null for now
-        mqb.updatePreparedSql(t, q).execute(null) // Pass null for now
+        initialize(null) // General review: call initialize(null)
+        mqb.updatePreparedSql(t, q).execute(null) // General review: call execute(null)
         return t
     }
 
@@ -186,49 +201,47 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         incr: Map<KProperty1<T, Number>, Number>,
         where: ModelQuery<T>
     ): Int {
-        init(null) // Pass null for now
-        return mqb.preparedAtomicUpdateSql(set, incr, where).execute(null).rowsAffected.toInt() // Pass null for now
+        initialize(null) // General review: call initialize(null)
+        return mqb.preparedAtomicUpdateSql(set, incr, where).execute(null).rowsAffected.toInt() // General review: call execute(null)
     }
 
-    // Step 3: Refactor updateMany
     override suspend fun updateMany(collection: Collection<T>) {
         executeInTransaction { transactionalConn ->
-            init(transactionalConn) // Call init with transactionalConn
+            initialize(transactionalConn) // General review: Use transactionalConn
             if (collection.isEmpty()) return@executeInTransaction
 
             for (t in collection) {
                 val q = idField eq idField.get(t)
                 val preparedSql = mqb.updatePreparedSql(t, q)
-                this.prepQuery(preparedSql.sql, preparedSql.values, transactionalConn) // Pass transactionalConn
+                this.prepQuery(preparedSql.sql, preparedSql.values, transactionalConn) // General review: Use transactionalConn
             }
         }
     }
 
-    // Step 4: Refactor updateManyBy
     override suspend fun updateManyBy(collection: Collection<T>, comparator: (T) -> (ModelQuery<T>)) {
         executeInTransaction { transactionalConn ->
-            init(transactionalConn) // Call init with transactionalConn
+            initialize(transactionalConn) // General review: Use transactionalConn
             if (collection.isEmpty()) return@executeInTransaction
 
             for (t in collection) {
                 val q = comparator(t)
                 val preparedSql = mqb.updatePreparedSql(t, q)
-                this.prepQuery(preparedSql.sql, preparedSql.values, transactionalConn) // Pass transactionalConn
+                this.prepQuery(preparedSql.sql, preparedSql.values, transactionalConn) // General review: Use transactionalConn
             }
         }
     }
 
 
     override suspend fun deleteBy(q: ModelQuery<T>) {
-        init(null) // Pass null for now
-        mqb.deletePreparedSql(q).execute(null) // Pass null for now
+        initialize(null) // General review: call initialize(null)
+        mqb.deletePreparedSql(q).execute(null) // General review: call execute(null)
     }
 
     override suspend fun findBy(q: ModelQuery<T>): List<T> {
-        init(null) // Pass null for now
+        initialize(null) // General review: call initialize(null)
         return mqb
             .selectPreparedSql(q)
-            .execute(null) // Pass null for now
+            .execute(null) // General review: call execute(null)
             .toModelList(modelClass)
     }
 
@@ -238,21 +251,21 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         limit: Int?,
         orderBy: OrderByDescriptor<T>?
     ): List<P> {
-        init(null) // Pass null for now
+        initialize(null) // General review: call initialize(null)
         return mqb
             .selectPreparedSql(where, select)
-            .execute(null) // Pass null for now
+            .execute(null) // General review: call execute(null)
             .toModelList(select)
     }
 
     override suspend fun getAll(): List<T> {
-        init(null) // Pass null for now
-        return query(mqb.selectAll(), null).toModelList(modelClass) // Pass null for now
+        initialize(null) // General review: call initialize(null)
+        return query(mqb.selectAll(), null).toModelList(modelClass)
     }
 
     override suspend fun count(q: ModelQuery<T>): Int {
-        init(null) // Pass null for now
-        return mqb.countPreparedSql(q).execute(null).rows.firstOrNull()?.get(0)?.toString()?.toInt() ?: 0 // Pass null for now
+        initialize(null) // General review: call initialize(null)
+        return mqb.countPreparedSql(q).execute(null).rows.firstOrNull()?.get(0)?.toString()?.toInt() ?: 0 // General review: call execute(null)
     }
 
     override suspend fun groupBy(
@@ -262,15 +275,11 @@ abstract class SqlModelRepository<I : Any, T : Any>(
         orderBy: OrderByDescriptor<T>?,
         limit: Int?
     ): List<List<Any?>> {
-        init(null) // Pass null for now
-        return mqb.groupByPreparedSql(select, groupBy, where, orderBy, limit).execute(null).rows // Pass null for now
+        initialize(null) // General review: call initialize(null)
+        return mqb.groupByPreparedSql(select, groupBy, where, orderBy, limit).execute(null).rows // General review: call execute(null)
     }
 
-    // checkTableSchema already modified above
-
-    // Updated PreparedSql.execute()
-    private suspend fun ModelSqlBuilder.PreparedSql.execute(connection: com.github.jasync.sql.db.SuspendingConnection? = null): SqlQueryResults {
-        //println("TEST SQL: $sql <-- $values")
+    private suspend fun ModelSqlBuilder.PreparedSql.execute(connection: SuspendingConnection? = null): SqlQueryResults { // Replaced FQN
         return prepQuery(sql, values, connection)
     }
 
@@ -286,10 +295,10 @@ abstract class SqlModelRepository<I : Any, T : Any>(
 
     //--------------------
 
-    abstract suspend fun query(sql: String, connection: com.github.jasync.sql.db.SuspendingConnection? = null): SqlQueryResults
+    abstract suspend fun query(sql: String, connection: SuspendingConnection? = null): SqlQueryResults // Replaced FQN
 
-    abstract suspend fun prepQuery(sql: String, values: List<Any?>, connection: com.github.jasync.sql.db.SuspendingConnection? = null): SqlQueryResults
+    abstract suspend fun prepQuery(sql: String, values: List<Any?>, connection: SuspendingConnection? = null): SqlQueryResults // Replaced FQN
 
-    protected abstract suspend fun <R> executeInTransaction(block: suspend (transactionalConnection: com.github.jasync.sql.db.SuspendingConnection) -> R): R
+    protected abstract suspend fun <R> executeInTransaction(block: suspend (transactionalConnection: SuspendingConnection) -> R): R // Replaced FQN
 
 }

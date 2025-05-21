@@ -75,10 +75,10 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             else -> try {
                 dbJson.fromJson(dbValue.toString(), parameterData.type)
             } catch (e: JsonSyntaxException) {
-                logger.error(e) { "Error deserializing JSON to ${parameterData.type} from value: $dbValue" }
+                logger.error(e) { "Error deserializing JSON to ${parameterData.type} from value: $dbValue. Error: ${e.message}" }
                 null // Or rethrow, or handle as per desired error strategy
             } catch (e: Exception) {
-                logger.error(e) { "Generic error deserializing to ${parameterData.type} from value: $dbValue" }
+                logger.error(e) { "Generic error deserializing to ${parameterData.type} from value: $dbValue. Error: ${e.message}" }
                 null // Or rethrow
             }
         }
@@ -140,7 +140,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
             try {
                 val constuctor = (type as Class<*>).declaredConstructors.first { it.parameterCount == 1 }
                     ?: run {
-                        adapterLogger.error { "Can't find a constructor with one argument for $type" }
+                        adapterLogger.error { "Constructor for type $type not found with one argument" } // Slightly more specific message
                         throw IllegalStateException("Can't find a constructor with one argument for $type")
                     }
                 val idString = when {
@@ -160,7 +160,7 @@ open class DefaultSerializationStrategy: SerializationStrategy {
                 }
                 return constuctor.newInstance(idString) as Id
             } catch (e: Exception) {
-                adapterLogger.error(e) { "Error deserializing Id of type $type from JsonElement: $je" }
+                adapterLogger.error(e) { "Error deserializing Id of type $type from JsonElement: $je. Error: ${e.message}" }
                 throw e // Re-throw to maintain previous behavior, or handle differently
             }
         }

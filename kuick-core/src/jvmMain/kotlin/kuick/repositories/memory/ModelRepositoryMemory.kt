@@ -53,5 +53,24 @@ open class ModelRepositoryMemory<I : Any, T : Any>(
 
     private fun id(t: T): I = idField.get(t)
 
+    override suspend fun updateManyBy(collection: Collection<T>, comparator: (T) -> (ModelQuery<T>)) {
+        init()
+        if (collection.isEmpty()) return
+
+        for (itemInCollection in collection) {
+            val query = comparator(itemInCollection)
+            // Find the index of the item in the internal table that matches the query
+            // We assume RepositoryMemory has `table: MutableList<T>` and `it.match(query)`
+            val indexInTable = table.indexOfFirst { it.match(query) }
+
+            if (indexInTable != -1) {
+                // If found, replace the item in the table with the item from the input collection
+                table.removeAt(indexInTable)
+                table.add(indexInTable, efficientClone(itemInCollection)) // Use efficientClone for consistency
+            }
+            // If not found, this specific itemInCollection does not update anything.
+            // This matches typical update semantics (update if exists).
+        }
+    }
 }
 
