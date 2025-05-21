@@ -17,10 +17,29 @@ open class ModelRepositoryJasync<I : Any, T : Any>(
     serializationStrategy: SerializationStrategy = DefaultSerializationStrategy()
 ) : SqlModelRepository<I, T>(modelClass, tableName, idField, serializationStrategy) {
 
-    override suspend fun query(sql: String): SqlQueryResults = pool.query(sql).toSqlQueryResults()
+    // Step 2.1: Implement executeInTransaction
+    override suspend fun <R> executeInTransaction(block: suspend (transactionalConnection: com.github.jasync.sql.db.SuspendingConnection) -> R): R {
+        return pool.inTransaction { conn -> // conn is from JasyncPool.inTransaction
+            block(conn) // Pass this specific connection to the block
+        }
+    }
 
-    override suspend fun prepQuery(sql: String, values: List<Any?>): SqlQueryResults =
-        pool.prepQuery(sql, values).toSqlQueryResults()
+    // Step 2.2: Update query and prepQuery implementations
+    override suspend fun query(sql: String, connection: com.github.jasync.sql.db.SuspendingConnection?): SqlQueryResults {
+        return if (connection != null) {
+            connection.sendQuery(sql).toSqlQueryResults()
+        } else {
+            pool.query(sql).toSqlQueryResults()
+        }
+    }
+
+    override suspend fun prepQuery(sql: String, values: List<Any?>, connection: com.github.jasync.sql.db.SuspendingConnection?): SqlQueryResults {
+        return if (connection != null) {
+            connection.sendPreparedStatement(sql, values).toSqlQueryResults()
+        } else {
+            pool.prepQuery(sql, values).toSqlQueryResults()
+        }
+    }
 
     fun QueryResult.toSqlQueryResults(): SqlQueryResults = SqlQueryResults(rowsAffected, rows)
 

@@ -63,19 +63,39 @@ class JasyncPool(
             logger.trace { "[SQL] $sql ${values ?: ""} | ${qr.rowsAffected} rows, $lapse ms" }
             return qr
         } catch (t: Throwable) {
-            System.err.println("SQL ERROR ---------------------")
-            System.err.println("SQL:    $sql")
-            System.err.println("Values: $values")
+            logger.error { "SQL ERROR ---------------------" }
+            logger.error { "SQL:    $sql" }
+            logger.error { "Values: $values" }
+            logger.error(t) { "Exception during SQL execution" } // Log exception before rethrowing
             throw t
         }
     }
 
     private fun log(msg: String) {
-        println("${Date()} $msg")
+        logger.info { msg } // Date prefix will be handled by logger configuration
     }
 
     private fun debug(msg: String) {
         if (debug) log(msg)
+    }
+
+    suspend fun <R> inTransaction(block: suspend (connection: SuspendingConnection) -> R): R {
+        val conn = this.connection()
+        conn.beginTransaction() // Start transaction
+        try {
+            val result = block(conn) // Execute block with the connection
+            conn.commitTransaction() // Commit
+            return result
+        } catch (e: Throwable) {
+            try {
+                conn.rollbackTransaction() // Rollback on error
+            } catch (rollbackEx: Throwable) {
+                logger.warn(rollbackEx) { "Error during transaction rollback" } // Log rollback error
+            }
+            throw e // Re-throw original exception
+        }
+        // Note: Connection release is typically handled by the JAsync pool/connection proxy.
+        // If explicit release were needed, it would be in a finally block.
     }
 
 
